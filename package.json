@@ -1,0 +1,23 @@
+{
+  "name": "virtual-toastmasters",
+  "version": "1.0.0",
+  "description": "Practice public speaking with strangers, instantly",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
+  },
+  "keywords": ["webrtc", "public-speaking", "toastmasters"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
