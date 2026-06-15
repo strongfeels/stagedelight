@@ -69,7 +69,7 @@ function initSocket() {
         state.hasStarted = data.hasStarted;
         state.maxDuration = data.duration;
 
-        roomIdDisplay.textContent = `${data.roomId} (${getRoomTypeLabel(data.roomType)})`;
+        roomIdDisplay.textContent = `${getRoomTypeLabel(data.roomType)} #${data.roomId}`;
         updateQueue(data.queue);
         showRoom();
 
@@ -252,7 +252,7 @@ function updateRoomStats(stats) {
         const userCountEl = document.querySelector(`.room-users[data-type="${roomType}"]`);
         if (userCountEl) {
             const count = stats[roomType];
-            userCountEl.textContent = `${count} ${count === 1 ? 'user' : 'users'}`;
+            userCountEl.textContent = `${count} online`;
         }
     });
 }
@@ -260,6 +260,12 @@ function updateRoomStats(stats) {
 function showRoom() {
     landing.classList.add('hidden');
     room.style.display = 'flex';
+
+    const speaker = document.getElementById('speaker');
+    speaker.className = '';
+    if (state.roomType) {
+        speaker.classList.add(state.roomType);
+    }
 
     if (state.localStream) {
         speakerVideo.srcObject = state.localStream;
@@ -403,11 +409,11 @@ skipBtn.addEventListener('click', () => {
 
 function getRoomTypeLabel(type) {
     const labels = {
-        conference: '💼 Conference',
-        stage: '🎭 Stage',
-        concert: '🎸 Concert',
-        classroom: '🎓 Classroom',
-        casual: '☕ Casual'
+        conference: 'Conference',
+        stage: 'Stage',
+        concert: 'Concert',
+        classroom: 'Classroom',
+        casual: 'Casual'
     };
     return labels[type] || type;
 }
@@ -421,10 +427,10 @@ cameraToggleBtn.addEventListener('click', () => {
             videoTrack.enabled = state.isCameraOn;
 
             if (state.isCameraOn) {
-                cameraToggleBtn.textContent = '📹 Camera ON';
+                cameraToggleBtn.textContent = 'Camera ON';
                 cameraToggleBtn.classList.remove('off');
             } else {
-                cameraToggleBtn.textContent = '📹 Camera OFF';
+                cameraToggleBtn.textContent = 'Camera OFF';
                 cameraToggleBtn.classList.add('off');
             }
         }
@@ -439,10 +445,10 @@ micToggleBtn.addEventListener('click', () => {
             audioTrack.enabled = state.isMicOn;
 
             if (state.isMicOn) {
-                micToggleBtn.textContent = '🎤 Mic ON';
+                micToggleBtn.textContent = 'Mic ON';
                 micToggleBtn.classList.remove('off');
             } else {
-                micToggleBtn.textContent = '🎤 Mic OFF';
+                micToggleBtn.textContent = 'Mic OFF';
                 micToggleBtn.classList.add('off');
             }
         }

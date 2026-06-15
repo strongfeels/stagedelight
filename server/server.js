@@ -14,9 +14,9 @@ app.use(express.static('public'));
 // Room configurations
 const ROOM_CONFIGS = {
     conference: { duration: 15 * 60, label: '💼 Conference', minVotesToStart: 2 },
-    stage: { duration: 12 * 60, label: '🎭 Theater Stage', minVotesToStart: 2 },
-    concert: { duration: 6 * 60, label: '🎸 Concert', minVotesToStart: 2 },
-    classroom: { duration: 9 * 60, label: '🎓 Classroom', minVotesToStart: 2 },
+    stage: { duration: 9 * 60, label: 'Theater Stage', minVotesToStart: 2 },
+    concert: { duration: 12 * 60, label: 'Concert Hall', minVotesToStart: 2 },
+    classroom: { duration: 6 * 60, label: 'Classroom', minVotesToStart: 2 },
     casual: { duration: 3 * 60, label: '☕ Coffee Shop', minVotesToStart: 2 }
 };
 

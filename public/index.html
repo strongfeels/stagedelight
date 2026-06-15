@@ -4,65 +4,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Virtual Toastmasters</title>
+    <title>StageDelight</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
 <div id="landing">
-    <h1>🎤 Virtual Toastmasters</h1>
-    <p>Practice public speaking with strangers, instantly.</p>
+    <div class="landing-inner">
+        <div class="brand">
+            <h1>StageDelight</h1>
+            <p class="tagline">Practice public speaking with strangers, instantly.</p>
+        </div>
 
-    <div id="roomTypes">
-        <h2>Choose Your Stage</h2>
-        <div class="room-grid">
-            <div class="room-card" data-room-type="conference">
-                <div class="room-icon">💼</div>
-                <h3>Conference Room</h3>
-                <p>Professional setting for business presentations</p>
-                <div class="room-info">
-                    <span class="room-duration">15 min talks</span>
-                    <span class="room-users" data-type="conference">0 users</span>
+        <div id="roomTypes">
+            <h2>Pick a room</h2>
+            <div class="room-grid">
+                <div class="room-card" data-room-type="casual">
+                    <div class="room-card-top">
+                        <span class="room-label">Coffee Shop</span>
+                        <span class="room-duration">3 min</span>
+                    </div>
+                    <p>Relaxed atmosphere for casual talks</p>
+                    <div class="room-info">
+                        <span class="room-users" data-type="casual">0 online</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="room-card" data-room-type="stage">
-                <div class="room-icon">🎭</div>
-                <h3>Theater Stage</h3>
-                <p>Classic stage for dramatic performances</p>
-                <div class="room-info">
-                    <span class="room-duration">12 min talks</span>
-                    <span class="room-users" data-type="stage">0 users</span>
+                <div class="room-card" data-room-type="classroom">
+                    <div class="room-card-top">
+                        <span class="room-label">Classroom</span>
+                        <span class="room-duration">6 min</span>
+                    </div>
+                    <p>Educational setting for teaching practice</p>
+                    <div class="room-info">
+                        <span class="room-users" data-type="classroom">0 online</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="room-card" data-room-type="concert">
-                <div class="room-icon">🎸</div>
-                <h3>Concert Hall</h3>
-                <p>Large venue for musical performances</p>
-                <div class="room-info">
-                    <span class="room-duration">6 min talks</span>
-                    <span class="room-users" data-type="concert">0 users</span>
+                <div class="room-card" data-room-type="stage">
+                    <div class="room-card-top">
+                        <span class="room-label">Theater Stage</span>
+                        <span class="room-duration">9 min</span>
+                    </div>
+                    <p>Classic stage for dramatic performances</p>
+                    <div class="room-info">
+                        <span class="room-users" data-type="stage">0 online</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="room-card" data-room-type="classroom">
-                <div class="room-icon">🎓</div>
-                <h3>Classroom</h3>
-                <p>Educational setting for teaching practice</p>
-                <div class="room-info">
-                    <span class="room-duration">9 min talks</span>
-                    <span class="room-users" data-type="classroom">0 users</span>
+                <div class="room-card" data-room-type="concert">
+                    <div class="room-card-top">
+                        <span class="room-label">Concert Hall</span>
+                        <span class="room-duration">12 min</span>
+                    </div>
+                    <p>High-energy venue for short performances</p>
+                    <div class="room-info">
+                        <span class="room-users" data-type="concert">0 online</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="room-card" data-room-type="casual">
-                <div class="room-icon">☕</div>
-                <h3>Coffee Shop</h3>
-                <p>Relaxed atmosphere for casual talks</p>
-                <div class="room-info">
-                    <span class="room-duration">3 min talks</span>
-                    <span class="room-users" data-type="casual">0 users</span>
+                <div class="room-card" data-room-type="conference">
+                    <div class="room-card-top">
+                        <span class="room-label">Conference Room</span>
+                        <span class="room-duration">15 min</span>
+                    </div>
+                    <p>Professional setting for business presentations</p>
+                    <div class="room-info">
+                        <span class="room-users" data-type="conference">0 online</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -72,9 +84,13 @@
 <!-- Room Page -->
 <div id="room">
     <div id="header">
-        <h2>Room #<span id="roomId">1234</span></h2>
+        <div class="header-left">
+            <span class="header-brand">StageDelight</span>
+            <span class="header-sep">/</span>
+            <span id="roomId">1234</span>
+        </div>
         <div id="timer">00:00</div>
-        <div id="skipVotes">Skip Votes: <span id="skipCount">0</span>/<span id="skipNeeded">2</span></div>
+        <div id="skipVotes">Skip: <span id="skipCount">0</span>/<span id="skipNeeded">2</span></div>
     </div>
 
     <div id="main">
@@ -94,18 +110,18 @@
         <!-- Sidebar -->
         <div id="sidebar">
             <div id="queue">
-                <h3>Speaker Queue</h3>
+                <h3>Queue</h3>
                 <div id="queueList">
                     <!-- Queue items will be added here -->
                 </div>
             </div>
 
             <div id="controls">
-                <button id="voteStartBtn" class="hidden">Vote to Start (0/2)</button>
-                <button id="cameraToggleBtn">📹 Camera ON</button>
-                <button id="micToggleBtn">🎤 Mic ON</button>
-                <button id="skipBtn">Vote to Skip</button>
-                <button id="leaveBtn">Leave Room</button>
+                <button id="voteStartBtn" class="hidden btn-start">Vote to Start (0/2)</button>
+                <button id="cameraToggleBtn" class="btn-media">Camera ON</button>
+                <button id="micToggleBtn" class="btn-media">Mic ON</button>
+                <button id="skipBtn" class="btn-skip">Vote to Skip</button>
+                <button id="leaveBtn" class="btn-leave">Leave Room</button>
             </div>
         </div>
     </div>

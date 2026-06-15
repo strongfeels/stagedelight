@@ -1,118 +1,223 @@
-/* Reset and Base Styles */
-* {
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* ── Tokens ───────────────────────────────────────────────────────────────── */
+:root {
+    --bg:          #0b0b0c;
+    --surface-1:   #141416;
+    --surface-2:   #1c1c1f;
+    --surface-3:   #242428;
+    --border:      #2a2a2e;
+    --border-hover:#3a3a40;
+
+    --text:        #e4e2df;
+    --text-muted:  #807e7a;
+    --text-dim:    #5a5854;
+
+    --accent:      #c9a84c;
+    --accent-hover:#d4b96a;
+    --accent-dim:  rgba(201, 168, 76, 0.12);
+
+    --danger:      #b83a30;
+    --danger-hover:#cc4238;
+
+    --info:        #3b82c4;
+    --info-hover:  #4a94d6;
+
+    --radius-sm:   4px;
+    --radius-md:   6px;
+    --radius-lg:   10px;
+
+    --font-body:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-display:'Space Grotesk', 'Inter', sans-serif;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: #1a1a1a;
-    color: #fff;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
     height: 100vh;
     display: flex;
     flex-direction: column;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Buttons */
-button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 15px 40px;
-    font-size: 1.1rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-button:hover {
-    background: #45a049;
-}
-
-button:disabled {
-    background: #666;
-    cursor: not-allowed;
-}
-
-/* Landing Page */
+/* ── Landing ──────────────────────────────────────────────────────────────── */
 #landing {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100vh;
-    flex-direction: column;
-    gap: 20px;
+    padding: 40px 24px;
 }
 
-#landing h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
+.landing-inner {
+    max-width: 720px;
+    width: 100%;
 }
 
-#landing p {
-    color: #aaa;
-    margin-bottom: 20px;
+.brand h1 {
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 6px;
 }
 
-/* Room Type Selection */
-#roomTypes {
-    max-width: 900px;
-    margin: 0 auto;
+.tagline {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-bottom: 48px;
 }
 
 #roomTypes h2 {
-    font-size: 1.8rem;
-    margin-bottom: 30px;
-    color: #4CAF50;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 16px;
 }
 
+/* ── Room cards ───────────────────────────────────────────────────────────── */
 .room-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 20px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
 }
 
 .room-card {
-    background: #2d2d2d;
-    border: 2px solid transparent;
-    border-radius: 12px;
-    padding: 20px;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
     cursor: pointer;
-    transition: all 0.3s;
-    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
 }
 
 .room-card:hover {
-    border-color: #4CAF50;
-    transform: translateY(-5px);
-    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.3);
+    border-color: var(--border-hover);
+    background: var(--surface-2);
 }
 
 .room-card.selected {
-    border-color: #4CAF50;
-    background: #3d3d3d;
+    border-color: var(--accent);
+    background: var(--accent-dim);
 }
 
-.room-icon {
-    font-size: 3rem;
-    margin-bottom: 10px;
-}
-
-.room-card h3 {
-    font-size: 1.1rem;
+.room-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 8px;
-    color: #fff;
+}
+
+.room-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.room-duration {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
 }
 
 .room-card p {
-    font-size: 0.85rem;
-    color: #aaa;
-    line-height: 1.4;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 12px;
 }
 
-/* Room Page */
+.room-info {
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.room-users {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+/* ── Buttons (base) ───────────────────────────────────────────────────────── */
+button {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    color: #fff;
+}
+
+button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.btn-media {
+    background: var(--surface-3);
+    color: var(--text);
+}
+
+.btn-media:hover:not(:disabled) {
+    background: var(--border-hover);
+}
+
+.btn-media.off {
+    background: var(--danger);
+}
+
+.btn-media.off:hover:not(:disabled) {
+    background: var(--danger-hover);
+}
+
+.btn-start {
+    background: var(--info);
+}
+
+.btn-start:hover:not(:disabled) {
+    background: var(--info-hover);
+}
+
+.btn-skip {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+.btn-skip:hover:not(:disabled) {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-leave {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.btn-leave:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+}
+
+/* ── Room page ────────────────────────────────────────────────────────────── */
 #room {
     display: none;
     flex-direction: column;
@@ -120,69 +225,134 @@ button:disabled {
 }
 
 #header {
-    background: #2d2d2d;
-    padding: 15px 20px;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.header-brand {
+    font-family: var(--font-display);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.header-sep {
+    color: var(--text-dim);
+}
+
+#roomId {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
 #timer {
-    font-size: 2rem;
-    font-weight: bold;
-    color: #4CAF50;
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+}
+
+#skipVotes {
+    font-size: 0.8rem;
+    color: var(--text-muted);
 }
 
 #main {
     flex: 1;
     display: flex;
-    gap: 20px;
-    padding: 20px;
+    gap: 16px;
+    padding: 16px;
+    min-height: 0;
 }
 
-/* Video Area */
+/* ── Video area ───────────────────────────────────────────────────────────── */
 #videoArea {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
+    min-width: 0;
 }
 
 #speaker {
-    flex: 2;
-    background: #000;
-    border-radius: 12px;
+    background-color: #000;
+    background-image: url('../images/conferencehall.jpg');
+    background-size: 100% 100%;
+    background-position: center;
+    border-radius: var(--radius-lg);
     position: relative;
     overflow: hidden;
-    min-height: 400px;
+    width: 100%;
+    aspect-ratio: 16/9;
 }
 
+#speaker.conference { background-image: url('../images/conferencehall.jpg'); }
+#speaker.stage      { background-image: url('../images/theatre.avif'); }
+#speaker.concert    { background-image: url('../images/concert.avif'); }
+#speaker.classroom  { background-image: url('../images/classroom.avif'); }
+#speaker.casual     { background-image: url('../images/coffeeshop.avif'); }
+
 #speaker video {
-    width: 100%;
-    height: 100%;
+    width: 120px;
+    height: 160px;
     object-fit: cover;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: var(--radius-md);
+    border: 2px solid rgba(201, 168, 76, 0.6);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
+
+/* Per-room video + background positioning */
+#speaker.stage      { background-position: center bottom; }
+#speaker.stage video      { top: 58%; }
+
+#speaker.concert    { background-position: center 40%; }
+#speaker.concert video    { top: 55%; }
+
+#speaker.classroom  { background-position: center top; }
+#speaker.classroom video  { top: 38%; }
+
+#speaker.casual     { background-position: center center; }
+#speaker.casual video     { top: 50%; }
 
 #speakerName {
     position: absolute;
-    bottom: 20px;
-    left: 20px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 1.1rem;
+    bottom: 16px;
+    left: 16px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
+/* ── Audience ─────────────────────────────────────────────────────────────── */
 #audience {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
 }
 
 .audience-video {
     background: #000;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     position: relative;
     aspect-ratio: 4/3;
     overflow: hidden;
@@ -196,174 +366,88 @@ button:disabled {
 
 .audience-name {
     position: absolute;
-    bottom: 5px;
-    left: 5px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
+    bottom: 4px;
+    left: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    color: var(--text-muted);
 }
 
-/* Sidebar */
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
 #sidebar {
-    width: 300px;
-    background: #2d2d2d;
-    border-radius: 12px;
-    padding: 20px;
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
 }
 
 #queue {
     flex: 1;
+    overflow-y: auto;
 }
 
 #queue h3 {
-    margin-bottom: 15px;
-    color: #4CAF50;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
 }
 
 .queue-item {
-    background: #3d3d3d;
-    padding: 12px;
-    margin-bottom: 8px;
-    border-radius: 6px;
+    background: var(--surface-2);
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: var(--radius-md);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    font-size: 0.85rem;
 }
 
 .queue-item.active {
-    background: #4CAF50;
-    color: #000;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
 }
 
 .queue-position {
-    background: #555;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: var(--surface-3);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
 }
 
 .queue-item.active .queue-position {
-    background: #2d6b2f;
+    background: rgba(201, 168, 76, 0.2);
+    color: var(--accent);
 }
 
-/* Controls */
+/* ── Controls ─────────────────────────────────────────────────────────────── */
 #controls {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
-#skipBtn {
-    background: #f44336;
+#controls button {
+    width: 100%;
+    text-align: center;
 }
 
-#skipBtn:hover:not(:disabled) {
-    background: #da190b;
-}
-
-#leaveBtn {
-    background: #666;
-}
-
-#leaveBtn:hover {
-    background: #555;
-}
-
-/* Utilities */
+/* ── Utilities ────────────────────────────────────────────────────────────── */
 .hidden {
     display: none !important;
-}
-
-.room-info {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #444;
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.8rem;
-}
-
-.room-duration {
-    color: #4CAF50;
-    font-weight: 600;
-}
-
-.room-users {
-    color: #aaa;
-}
-
-#voteStartBtn {
-    background: #2196F3;
-}
-
-#voteStartBtn:hover:not(:disabled) {
-    background: #0b7dda;
-}
-
-#cameraToggleBtn, #micToggleBtn {
-    background: #4CAF50;
-}
-
-#cameraToggleBtn:hover, #micToggleBtn:hover {
-    background: #45a049;
-}
-
-#cameraToggleBtn.off, #micToggleBtn.off {
-    background: #f44336;
-}
-
-#cameraToggleBtn.off:hover, #micToggleBtn.off:hover {
-    background: #da190b;
-}
-
-#speaker {
-    flex: 2;
-    background-image: url('../images/conference.jpg');
-    background-size: cover;
-    background-position: center;
-    border-radius: 12px;
-    position: relative;
-    overflow: hidden;
-    min-height: 400px;
-}
-
-#speaker video {
-    width: 10%;  /* Adjust this to make the head bigger/smaller */
-    height: auto;
-    aspect-ratio: 9/16;
-    object-fit: cover;
-    position: absolute;
-
-    #speaker.conference {
-        background-image: url('../images/conference.jpg');
-    }
-
-    #speaker.stage {
-        background-image: url('../images/stage.jpg');
-    }
-
-    #speaker.concert {
-        background-image: url('../images/concert.jpg');
-    }
-
-    #speaker.classroom {
-        background-image: url('../images/classroom.jpg');
-    }
-
-    #speaker.casual {
-        background-image: url('../images/casual.jpg');
-    }
-
-    /* Position the video on the stage - ADJUST THESE VALUES */
-    left: 50%;
-    top: 30%;  /* Adjust: higher % = lower on screen */
-    transform: translate(-50%, -50%);
-
-    border-radius: 8px;
-    border: 3px solid rgba(76, 175, 80, 0.8);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
