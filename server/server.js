@@ -266,6 +266,12 @@ io.on('connection', (socket) => {
             socket.to(`room-${currentRoom.id}`).emit('user-left', socket.id);
             io.to(`room-${currentRoom.id}`).emit('queue-updated', currentRoom.queue);
             io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
+            if (!currentRoom.isEmpty()) {
+                io.to(`room-${currentRoom.id}`).emit('skip-votes-updated', {
+                    votes: currentRoom.skipVotes.size,
+                    needed: currentRoom.getSkipVotesNeeded()
+                });
+            }
             socket.leave(`room-${currentRoom.id}`);
             if (currentRoom.isEmpty()) {
                 rooms.delete(currentRoom.id);
@@ -318,7 +324,7 @@ io.on('connection', (socket) => {
             });
         }
 
-        socket.emit('skip-votes-updated', {
+        io.to(`room-${currentRoom.id}`).emit('skip-votes-updated', {
             votes: currentRoom.skipVotes.size,
             needed: currentRoom.getSkipVotesNeeded()
         });
@@ -405,6 +411,14 @@ io.on('connection', (socket) => {
                 io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
                     speakerId: newSpeaker.id,
                     remainingTime: currentRoom.getRemainingTime()
+                });
+            }
+
+            // Update skip vote count for remaining users
+            if (!currentRoom.isEmpty()) {
+                io.to(`room-${currentRoom.id}`).emit('skip-votes-updated', {
+                    votes: currentRoom.skipVotes.size,
+                    needed: currentRoom.getSkipVotesNeeded()
                 });
             }
 
@@ -514,6 +528,13 @@ io.on('connection', (socket) => {
                 io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
                     speakerId: newSpeaker.id,
                     remainingTime: currentRoom.getRemainingTime()
+                });
+            }
+
+            if (!currentRoom.isEmpty()) {
+                io.to(`room-${currentRoom.id}`).emit('skip-votes-updated', {
+                    votes: currentRoom.skipVotes.size,
+                    needed: currentRoom.getSkipVotesNeeded()
                 });
             }
 

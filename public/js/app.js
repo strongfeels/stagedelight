@@ -432,47 +432,11 @@ async function handleIceCandidate(data) {
 }
 
 function addRemoteStream(userId, stream) {
-    const videoTrack = stream.getVideoTracks()[0];
-
     if (userId === state.currentSpeaker) {
         speakerVideo.srcObject = stream;
         speakerVideo.muted = false;
-        if (videoTrack) {
-            const update = () => {
-                speakerVideo.classList.toggle('camera-off', videoTrack.muted);
-            };
-            videoTrack.addEventListener('mute', update);
-            videoTrack.addEventListener('unmute', update);
-            update();
-        }
     } else {
-        let videoEl = document.getElementById(`audience-${userId}`);
-        if (!videoEl) {
-            const container = document.createElement('div');
-            container.className = 'audience-video';
-            container.id = `container-${userId}`;
-            container.innerHTML = `
-                <video id="audience-${userId}" autoplay playsinline></video>
-                <div class="audience-name">${displayName(userId)}</div>
-            `;
-            audienceContainer.appendChild(container);
-            videoEl = document.getElementById(`audience-${userId}`);
-        }
-        videoEl.srcObject = stream;
-        videoEl.muted = (userId === state.userId);
-
-        if (videoTrack) {
-            const container = document.getElementById(`container-${userId}`);
-            const bg = roomBackgrounds[state.roomType] || '';
-            const update = () => {
-                const off = videoTrack.muted;
-                container.classList.toggle('camera-off', off);
-                container.style.backgroundImage = off && bg ? `url('${bg}')` : '';
-            };
-            videoTrack.addEventListener('mute', update);
-            videoTrack.addEventListener('unmute', update);
-            update();
-        }
+        addToAudienceGrid(userId, stream);
     }
 }
 
@@ -556,33 +520,63 @@ function updateAudience(audience) {
     });
 }
 
+function getStreamFromPeer(userId) {
+    const pc = state.peers.get(userId);
+    if (!pc) return null;
+    const receivers = pc.getReceivers();
+    if (receivers.length === 0) return null;
+    const stream = new MediaStream();
+    receivers.forEach(r => { if (r.track) stream.addTrack(r.track); });
+    return stream.getTracks().length > 0 ? stream : null;
+}
+
+function addToAudienceGrid(userId, stream) {
+    if (!stream) return;
+    let videoEl = document.getElementById(`audience-${userId}`);
+    if (!videoEl) {
+        const container = document.createElement('div');
+        container.className = 'audience-video';
+        container.id = `container-${userId}`;
+        container.innerHTML = `
+            <video id="audience-${userId}" autoplay playsinline></video>
+            <div class="audience-name">${displayName(userId)}</div>
+        `;
+        audienceContainer.appendChild(container);
+        videoEl = document.getElementById(`audience-${userId}`);
+    }
+    videoEl.srcObject = stream;
+    videoEl.muted = (userId === state.userId);
+}
+
 function updateSpeakerDisplay(data) {
+    const oldSpeaker = state.currentSpeaker;
+    state.currentSpeaker = data.speakerId;
     speakerName.textContent = displayName(data.speakerId);
 
-    state.currentSpeaker = data.speakerId;
+    // Remove new speaker from audience grid (they're on stage now)
+    const newSpeakerContainer = document.getElementById(`container-${data.speakerId}`);
+    if (newSpeakerContainer) newSpeakerContainer.remove();
 
+    // Move old speaker back to audience grid
+    if (oldSpeaker && oldSpeaker !== data.speakerId) {
+        if (oldSpeaker === state.userId) {
+            addToAudienceGrid(oldSpeaker, state.localStream);
+        } else {
+            const stream = getStreamFromPeer(oldSpeaker);
+            if (stream) addToAudienceGrid(oldSpeaker, stream);
+        }
+    }
+
+    // Set speaker video
     if (data.speakerId === state.userId) {
         speakerVideo.srcObject = state.localStream;
         speakerVideo.muted = true;
     } else {
-        setTimeout(() => {
-            const pc = state.peers.get(data.speakerId);
-            if (pc) {
-                const receivers = pc.getReceivers();
-                if (receivers.length > 0) {
-                    const stream = new MediaStream();
-                    receivers.forEach(receiver => {
-                        if (receiver.track) {
-                            stream.addTrack(receiver.track);
-                        }
-                    });
-                    if (stream.getTracks().length > 0) {
-                        speakerVideo.srcObject = stream;
-                        speakerVideo.muted = false;
-                    }
-                }
-            }
-        }, 100);
+        const stream = getStreamFromPeer(data.speakerId);
+        if (stream) {
+            speakerVideo.srcObject = stream;
+            speakerVideo.muted = false;
+        }
     }
 }
 
