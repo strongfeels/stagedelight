@@ -38,11 +38,15 @@
     --font-display:'Space Grotesk', 'Inter', sans-serif;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: var(--font-body);
     background: var(--bg);
     color: var(--text);
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
@@ -51,105 +55,356 @@ body {
 /* ── Landing ──────────────────────────────────────────────────────────────── */
 #landing {
     display: flex;
+    flex-direction: column;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.hero {
+    position: relative;
+    height: 100vh;
+    display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    padding: 40px 24px;
+    overflow: hidden;
 }
 
-.landing-inner {
-    max-width: 720px;
-    width: 100%;
+.hero-bg {
+    position: absolute;
+    inset: 0;
+    background: url('../images/theatre.avif') center/cover no-repeat;
+    filter: brightness(0.25);
+    animation: hero-zoom 20s ease-in-out infinite alternate;
 }
 
-.brand h1 {
+@keyframes hero-zoom {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 0 24px;
+    max-width: 680px;
+}
+
+.hero-title {
     font-family: var(--font-display);
-    font-size: 2.4rem;
+    font-size: clamp(2.4rem, 6vw, 4rem);
     font-weight: 700;
     letter-spacing: -0.03em;
     color: var(--text);
-    margin-bottom: 6px;
+    margin-bottom: 12px;
 }
 
-.tagline {
+.hero-title .gold {
+    color: var(--accent);
+}
+
+.hero-tagline {
+    font-size: clamp(1.05rem, 2.5vw, 1.35rem);
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.hero-sub {
+    font-size: clamp(0.85rem, 1.8vw, 1rem);
     color: var(--text-muted);
-    font-size: 1rem;
-    margin-bottom: 48px;
+    line-height: 1.6;
+    margin-bottom: 36px;
 }
 
-#roomTypes h2 {
+.hero-cta {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 14px 36px;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.hero-cta:hover {
+    background: var(--accent-hover);
+}
+
+/* ── How It Works ─────────────────────────────────────────────────────────── */
+.how-it-works {
+    padding: 64px 24px;
+    background: var(--surface-1);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.steps {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    max-width: 820px;
+    margin: 0 auto;
+}
+
+.step {
+    flex: 1;
+    text-align: center;
+    max-width: 220px;
+    padding: 0 12px;
+}
+
+.step-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    border: 1px solid rgba(201, 168, 76, 0.25);
+}
+
+.step-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.step h3 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.step p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.step-connector {
+    width: 48px;
+    height: 1px;
+    background: var(--border-hover);
+    flex-shrink: 0;
+    margin-top: 54px;
+}
+
+/* ── Venue Cards ──────────────────────────────────────────────────────────── */
+.venues {
+    padding: 64px 24px 80px;
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.venues-heading {
     font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-dim);
-    margin-bottom: 16px;
+    margin-bottom: 24px;
+    text-align: center;
 }
 
-/* ── Room cards ───────────────────────────────────────────────────────────── */
 .room-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
 }
 
 .room-card {
     background: var(--surface-1);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 18px 20px;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s;
+    overflow: hidden;
 }
 
 .room-card:hover {
     border-color: var(--border-hover);
     background: var(--surface-2);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .room-card.selected {
     border-color: var(--accent);
     background: var(--accent-dim);
+    box-shadow: 0 0 20px rgba(201, 168, 76, 0.15);
 }
 
-.room-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
+.room-card-thumb {
+    position: relative;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+}
+
+.room-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.room-card-thumb .room-duration {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.room-card-body {
+    padding: 16px 18px 18px;
 }
 
 .room-label {
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: var(--text);
+    display: block;
+    margin-bottom: 6px;
 }
 
-.room-duration {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--accent);
-    background: var(--accent-dim);
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-}
-
-.room-card p {
+.room-card-body p {
     font-size: 0.8rem;
     color: var(--text-muted);
-    line-height: 1.5;
-    margin-bottom: 12px;
+    line-height: 1.55;
+    margin-bottom: 14px;
 }
 
 .room-info {
-    padding-top: 10px;
+    padding-top: 12px;
     border-top: 1px solid var(--border);
 }
 
 .room-users {
-    font-size: 0.75rem;
+    font-size: 0.78rem;
     color: var(--text-dim);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── Pulse Dot ────────────────────────────────────────────────────────────── */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4caf50;
+    display: inline-block;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.pulse-dot::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: rgba(76, 175, 80, 0.4);
+    animation: pulse-ring 2s ease-out infinite;
+}
+
+.pulse-dot.active {
+    background: #66ff88;
+    box-shadow: 0 0 6px rgba(102, 255, 136, 0.5);
+}
+
+.pulse-dot.active::after {
+    background: rgba(102, 255, 136, 0.4);
+}
+
+@keyframes pulse-ring {
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ── Split button + device select ─────────────────────────────────────────── */
+.split-btn {
+    display: flex;
+    position: relative;
+    width: 100%;
+}
+
+.split-btn .btn-media {
+    flex: 1;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.split-btn-arrow {
+    flex: none !important;
+    width: 32px;
+    padding: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-left: 1px solid var(--border) !important;
+    font-size: 0.7rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.device-menu {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    width: 100%;
+    margin-bottom: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: none;
+    z-index: 10;
+}
+
+.device-menu.open {
+    display: block;
+}
+
+.device-menu-item {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.device-menu-item:hover {
+    background: var(--surface-3);
+    color: var(--text);
+}
+
+.device-menu-item.active {
+    color: var(--accent);
 }
 
 /* ── Buttons (base) ───────────────────────────────────────────────────────── */
@@ -171,12 +426,12 @@ button:disabled {
 }
 
 .btn-media {
-    background: var(--surface-3);
+    background: #1a6b2a;
     color: var(--text);
 }
 
 .btn-media:hover:not(:disabled) {
-    background: var(--border-hover);
+    background: #1f7f32;
 }
 
 .btn-media.off {
@@ -304,8 +559,9 @@ button:disabled {
 #speaker.casual     { background-image: url('../images/coffeeshop.avif'); }
 
 #speaker video {
-    width: 120px;
-    height: 160px;
+    width: clamp(120px, 15%, 280px);
+    height: auto;
+    aspect-ratio: 3/4;
     object-fit: cover;
     position: absolute;
     left: 50%;
@@ -356,12 +612,22 @@ button:disabled {
     position: relative;
     aspect-ratio: 4/3;
     overflow: hidden;
+    background-size: cover;
+    background-position: center;
 }
 
 .audience-video video {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.audience-video.camera-off video {
+    visibility: hidden;
+}
+
+#speaker video.camera-off {
+    visibility: hidden;
 }
 
 .audience-name {
@@ -375,6 +641,78 @@ button:disabled {
     border-radius: var(--radius-sm);
     font-size: 0.7rem;
     color: var(--text-muted);
+}
+
+/* ── Chat ────────────────────────────────────────────────────────────────── */
+#chat {
+    display: flex;
+    flex-direction: column;
+    height: 180px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface-1);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+#chatMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-msg {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.chat-msg .chat-user {
+    font-weight: 600;
+    color: var(--accent);
+    margin-right: 6px;
+}
+
+.chat-msg .chat-text {
+    color: var(--text-muted);
+}
+
+#chatForm {
+    display: flex;
+    border-top: 1px solid var(--border);
+}
+
+#chatInput {
+    flex: 1;
+    background: var(--surface-2);
+    border: none;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    outline: none;
+}
+
+#chatInput::placeholder {
+    color: var(--text-dim);
+}
+
+#chatForm button {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.15s;
+}
+
+#chatForm button:hover {
+    background: var(--accent-hover);
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────────── */
@@ -435,6 +773,29 @@ button:disabled {
     color: var(--accent);
 }
 
+/* ── Audience list ────────────────────────────────────────────────────────── */
+#audience-list {
+    overflow-y: auto;
+}
+
+#audience-list h3 {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+}
+
+.audience-item {
+    background: var(--surface-2);
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
 /* ── Controls ─────────────────────────────────────────────────────────────── */
 #controls {
     display: flex;
@@ -442,9 +803,18 @@ button:disabled {
     gap: 8px;
 }
 
-#controls button {
+#controls > button {
     width: 100%;
     text-align: center;
+}
+
+#controls .split-btn .btn-media {
+    text-align: center;
+}
+
+#controls .split-btn-arrow {
+    width: 32px;
+    min-width: 32px;
 }
 
 /* ── Tablet portrait ──────────────────────────────────────────────────────── */
@@ -459,22 +829,104 @@ button:disabled {
     }
 }
 
+/* ── Collapsible panels (hidden on desktop) ──────────────────────────────── */
+.panel-toggle {
+    display: none;
+}
+
 /* ── Phone ────────────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-    #landing {
-        padding: 24px 16px;
+    .panel-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
     }
 
-    .brand h1 {
-        font-size: 1.8rem;
+    .panel-toggle:hover {
+        background: var(--surface-2);
+        border-color: var(--border-hover);
     }
 
-    .tagline {
-        margin-bottom: 32px;
+    .panel-toggle[aria-expanded="true"] {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-bottom-color: transparent;
+        color: var(--text);
+    }
+
+    .toggle-chevron {
+        font-size: 0.65rem;
+        transition: transform 0.2s;
+    }
+
+    .panel-toggle[aria-expanded="true"] .toggle-chevron {
+        transform: rotate(180deg);
+    }
+
+    .collapsible.collapsed {
+        display: none !important;
+    }
+
+    .panel-toggle + #chat {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+
+    .panel-toggle + #sidebar {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+    .hero {
+        height: 85vh;
+    }
+
+    .hero-cta {
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+
+    .how-it-works {
+        padding: 48px 20px;
+    }
+
+    .steps {
+        flex-direction: column;
+        align-items: center;
+        gap: 32px;
+    }
+
+    .step {
+        max-width: 280px;
+    }
+
+    .step-connector {
+        display: none;
+    }
+
+    .venues {
+        padding: 48px 16px 64px;
     }
 
     .room-grid {
         grid-template-columns: 1fr;
+    }
+
+    .room-card-thumb {
+        aspect-ratio: 2.2/1;
     }
 
     #header {
@@ -516,7 +968,8 @@ button:disabled {
 
     #speaker video {
         width: 90px;
-        height: 120px;
+        height: auto;
+        aspect-ratio: 3/4;
     }
 
     #speakerName {
@@ -531,6 +984,10 @@ button:disabled {
         flex: none;
     }
 
+    #chat {
+        height: 150px;
+    }
+
     #sidebar {
         width: 100%;
         flex-shrink: 1;
@@ -541,9 +998,13 @@ button:disabled {
         flex-wrap: wrap;
     }
 
-    #controls button {
+    #controls > button,
+    #controls > .split-btn {
         flex: 1 1 auto;
         min-width: 0;
+    }
+
+    #controls button {
         padding: 10px 12px;
         font-size: 0.78rem;
     }
@@ -551,16 +1012,16 @@ button:disabled {
 
 /* ── Small phones (iPhone SE etc.) ───────────────────────────────────────── */
 @media (max-width: 375px) {
-    .brand h1 {
-        font-size: 1.5rem;
+    .hero-title {
+        font-size: 2rem;
     }
 
-    .room-card {
-        padding: 14px 16px;
+    .room-card-body {
+        padding: 12px 14px 14px;
     }
 
     .room-label {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
 
     #main {
@@ -570,7 +1031,8 @@ button:disabled {
 
     #speaker video {
         width: 70px;
-        height: 94px;
+        height: auto;
+        aspect-ratio: 3/4;
     }
 
     #controls button {

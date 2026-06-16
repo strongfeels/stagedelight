@@ -13,8 +13,11 @@ const state = {
     hasVotedStart: false,
     hasStarted: false,
     maxDuration: 600,
-    isCameraOn: true,
-    isMicOn: true
+    isCameraOn: false,
+    isMicOn: false,
+    inQueue: false,
+    myName: null,
+    names: {}
 };
 
 // DOM elements
@@ -34,6 +37,18 @@ const skipNeededDisplay = document.getElementById('skipNeeded');
 const roomIdDisplay = document.getElementById('roomId');
 const cameraToggleBtn = document.getElementById('cameraToggleBtn');
 const micToggleBtn = document.getElementById('micToggleBtn');
+const joinQueueBtn = document.getElementById('joinQueueBtn');
+const audienceListEl = document.getElementById('audienceList');
+const cameraMenu = document.getElementById('cameraMenu');
+const micMenu = document.getElementById('micMenu');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const chatMessages = document.getElementById('chatMessages');
+
+function displayName(userId) {
+    if (userId === state.userId) return 'You';
+    return state.names[userId] || `User ${userId.slice(-4)}`;
+}
 
 // Room type selection
 roomCards.forEach(card => {
@@ -68,9 +83,16 @@ function initSocket() {
         state.roomType = data.roomType;
         state.hasStarted = data.hasStarted;
         state.maxDuration = data.duration;
+        state.myName = data.yourName;
+        state.names = data.names || {};
 
-        roomIdDisplay.textContent = `${getRoomTypeLabel(data.roomType)} #${data.roomId}`;
+        roomIdDisplay.textContent = getRoomTypeLabel(data.roomType);
+        chatMessages.innerHTML = '';
+        state.inQueue = false;
+        joinQueueBtn.textContent = 'Join Queue';
+        joinQueueBtn.classList.remove('off');
         updateQueue(data.queue);
+        updateAudience(data.audience);
         showRoom();
 
         if (!data.hasStarted) {
@@ -80,6 +102,10 @@ function initSocket() {
 
     state.socket.on('queue-updated', (queue) => {
         updateQueue(queue);
+    });
+
+    state.socket.on('audience-updated', (audience) => {
+        updateAudience(audience);
     });
 
     state.socket.on('start-votes-updated', (data) => {
@@ -110,6 +136,7 @@ function initSocket() {
     });
 
     state.socket.on('user-left', (userId) => {
+        delete state.names[userId];
         removePeer(userId);
     });
 
@@ -129,6 +156,26 @@ function initSocket() {
     state.socket.on('ice-candidate', async (data) => {
         await handleIceCandidate(data);
     });
+
+    state.socket.on('name-assigned', (data) => {
+        state.names[data.userId] = data.name;
+    });
+
+    // Chat messages
+    state.socket.on('chat-message', (data) => {
+        const name = data.userId === state.userId ? 'You' : (data.name || displayName(data.userId));
+        const msg = document.createElement('div');
+        msg.className = 'chat-msg';
+        msg.innerHTML = `<span class="chat-user">${name}</span><span class="chat-text">${data.text}</span>`;
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+}
+
+function isVirtualCamera(label) {
+    const l = label.toLowerCase();
+    return l.includes('virtual') || l.includes('obs') || l.includes('manycam')
+        || l.includes('snap camera') || l.includes('xsplit') || l.includes('mmhmm');
 }
 
 // Get user media (camera/mic)
@@ -138,6 +185,42 @@ async function getUserMedia() {
             video: true,
             audio: true
         });
+
+        // Block virtual cameras (OBS, ManyCam, etc.)
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const physicalCameras = devices.filter(d =>
+            d.kind === 'videoinput' && !isVirtualCamera(d.label)
+        );
+
+        if (physicalCameras.length === 0) {
+            state.localStream.getTracks().forEach(t => t.stop());
+            state.localStream = null;
+            alert('No physical camera detected. Virtual cameras are not allowed.');
+            return false;
+        }
+
+        // If the default picked a virtual camera, swap to a physical one
+        const videoTrack = state.localStream.getVideoTracks()[0];
+        if (videoTrack && isVirtualCamera(videoTrack.label)) {
+            const betterStream = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: { exact: physicalCameras[0].deviceId } },
+                audio: false
+            });
+            const newTrack = betterStream.getVideoTracks()[0];
+            state.localStream.removeTrack(videoTrack);
+            state.localStream.addTrack(newTrack);
+            videoTrack.stop();
+        }
+
+        state.localStream.getVideoTracks().forEach(t => t.enabled = false);
+        state.localStream.getAudioTracks().forEach(t => t.enabled = false);
+        state.isCameraOn = false;
+        state.isMicOn = false;
+        cameraToggleBtn.textContent = 'Camera OFF';
+        cameraToggleBtn.classList.add('off');
+        micToggleBtn.textContent = 'Mic OFF';
+        micToggleBtn.classList.add('off');
+        await populateDevices();
         return true;
     } catch (err) {
         console.error('Error accessing media devices:', err);
@@ -145,6 +228,99 @@ async function getUserMedia() {
         return false;
     }
 }
+
+async function populateDevices() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(d => d.kind === 'videoinput' && !isVirtualCamera(d.label));
+    const audioDevices = devices.filter(d => d.kind === 'audioinput');
+
+    const currentVideoId = state.localStream?.getVideoTracks()[0]?.getSettings().deviceId;
+    const currentAudioId = state.localStream?.getAudioTracks()[0]?.getSettings().deviceId;
+
+    buildMenu(cameraMenu, videoDevices, currentVideoId, 'video');
+    buildMenu(micMenu, audioDevices, currentAudioId, 'audio');
+}
+
+function buildMenu(menu, devices, activeId, kind) {
+    menu.innerHTML = '';
+    devices.forEach((d, i) => {
+        const item = document.createElement('div');
+        item.className = 'device-menu-item';
+        if (d.deviceId === activeId) item.classList.add('active');
+        item.textContent = d.label || `${kind === 'video' ? 'Camera' : 'Mic'} ${i + 1}`;
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            switchDevice(kind, d.deviceId);
+            menu.classList.remove('open');
+        });
+        menu.appendChild(item);
+    });
+}
+
+async function switchDevice(kind, deviceId) {
+    const isVideo = kind === 'video';
+    const constraints = isVideo
+        ? { video: { deviceId: { exact: deviceId } }, audio: false }
+        : { video: false, audio: { deviceId: { exact: deviceId } } };
+
+    try {
+        const tempStream = await navigator.mediaDevices.getUserMedia(constraints);
+        const newTrack = tempStream.getTracks()[0];
+        const oldTrack = isVideo
+            ? state.localStream.getVideoTracks()[0]
+            : state.localStream.getAudioTracks()[0];
+
+        // Preserve enabled state
+        newTrack.enabled = isVideo ? state.isCameraOn : state.isMicOn;
+
+        // Replace in local stream
+        if (oldTrack) state.localStream.removeTrack(oldTrack);
+        state.localStream.addTrack(newTrack);
+        oldTrack?.stop();
+
+        // Replace in all peer connections
+        state.peers.forEach(pc => {
+            const sender = pc.getSenders().find(s =>
+                s.track && s.track.kind === (isVideo ? 'video' : 'audio')
+            );
+            if (sender) sender.replaceTrack(newTrack);
+        });
+
+        // Update local video display if switching camera
+        if (isVideo && state.currentSpeaker === state.userId) {
+            speakerVideo.srcObject = state.localStream;
+        }
+
+        // Update active state in menu
+        const menu = isVideo ? cameraMenu : micMenu;
+        menu.querySelectorAll('.device-menu-item').forEach(el => el.classList.remove('active'));
+        const items = menu.querySelectorAll('.device-menu-item');
+        const devices = (await navigator.mediaDevices.enumerateDevices())
+            .filter(d => d.kind === (isVideo ? 'videoinput' : 'audioinput'));
+        devices.forEach((d, i) => {
+            if (d.deviceId === deviceId && items[i]) items[i].classList.add('active');
+        });
+    } catch (err) {
+        console.error(`Error switching ${kind} device:`, err);
+    }
+}
+
+// Split button arrow toggles
+document.querySelectorAll('.split-btn-arrow').forEach(arrow => {
+    arrow.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = arrow.parentElement.querySelector('.device-menu');
+        document.querySelectorAll('.device-menu.open').forEach(m => {
+            if (m !== menu) m.classList.remove('open');
+        });
+        menu.classList.toggle('open');
+    });
+});
+
+// Close menus when clicking elsewhere
+document.addEventListener('click', () => {
+    document.querySelectorAll('.device-menu.open').forEach(m => m.classList.remove('open'));
+});
 
 // WebRTC Functions
 async function createPeerConnection(userId, isInitiator) {
@@ -212,9 +388,19 @@ async function handleIceCandidate(data) {
 }
 
 function addRemoteStream(userId, stream) {
+    const videoTrack = stream.getVideoTracks()[0];
+
     if (userId === state.currentSpeaker) {
         speakerVideo.srcObject = stream;
         speakerVideo.muted = false;
+        if (videoTrack) {
+            const update = () => {
+                speakerVideo.classList.toggle('camera-off', videoTrack.muted);
+            };
+            videoTrack.addEventListener('mute', update);
+            videoTrack.addEventListener('unmute', update);
+            update();
+        }
     } else {
         let videoEl = document.getElementById(`audience-${userId}`);
         if (!videoEl) {
@@ -223,13 +409,26 @@ function addRemoteStream(userId, stream) {
             container.id = `container-${userId}`;
             container.innerHTML = `
                 <video id="audience-${userId}" autoplay playsinline></video>
-                <div class="audience-name">User ${userId.slice(-4)}</div>
+                <div class="audience-name">${displayName(userId)}</div>
             `;
             audienceContainer.appendChild(container);
             videoEl = document.getElementById(`audience-${userId}`);
         }
         videoEl.srcObject = stream;
         videoEl.muted = (userId === state.userId);
+
+        if (videoTrack) {
+            const container = document.getElementById(`container-${userId}`);
+            const bg = roomBackgrounds[state.roomType] || '';
+            const update = () => {
+                const off = videoTrack.muted;
+                container.classList.toggle('camera-off', off);
+                container.style.backgroundImage = off && bg ? `url('${bg}')` : '';
+            };
+            videoTrack.addEventListener('mute', update);
+            videoTrack.addEventListener('unmute', update);
+            update();
+        }
     }
 }
 
@@ -252,7 +451,11 @@ function updateRoomStats(stats) {
         const userCountEl = document.querySelector(`.room-users[data-type="${roomType}"]`);
         if (userCountEl) {
             const count = stats[roomType];
-            userCountEl.textContent = `${count} online`;
+            if (count === 0) {
+                userCountEl.innerHTML = '<span class="pulse-dot"></span> Join now';
+            } else {
+                userCountEl.innerHTML = `<span class="pulse-dot active"></span> ${count} online`;
+            }
         }
     });
 }
@@ -273,9 +476,13 @@ function showRoom() {
     }
 }
 
-function showLanding() {
+function showLanding(skipToVenues) {
     room.style.display = 'none';
     landing.classList.remove('hidden');
+    if (skipToVenues) {
+        document.querySelector('.hero').style.display = 'none';
+        window.scrollTo(0, 0);
+    }
 }
 
 function updateQueue(queue) {
@@ -287,18 +494,27 @@ function updateQueue(queue) {
         item.className = 'queue-item';
         if (index === 0) item.classList.add('active');
 
-        const isYou = user.id === state.userId;
         item.innerHTML = `
-            <span>${isYou ? 'You' : `User ${user.id.slice(-4)}`}</span>
+            <span>${displayName(user.id)}</span>
             <span class="queue-position">${index === 0 ? 'Speaking' : `#${index}`}</span>
         `;
         queueList.appendChild(item);
     });
 }
 
+function updateAudience(audience) {
+    audienceListEl.innerHTML = '';
+    audience.forEach(user => {
+        const item = document.createElement('div');
+        item.className = 'audience-item';
+        item.textContent = displayName(user.id);
+        audienceListEl.appendChild(item);
+    });
+}
+
 function updateSpeakerDisplay(data) {
     const isYou = data.speakerId === state.userId;
-    speakerName.textContent = isYou ? 'You (Speaking)' : `User ${data.speakerId.slice(-4)}`;
+    speakerName.textContent = isYou ? `${state.myName} (You)` : displayName(data.speakerId);
 
     state.currentSpeaker = data.speakerId;
 
@@ -386,8 +602,23 @@ voteStartBtn.addEventListener('click', () => {
     }
 });
 
+joinQueueBtn.addEventListener('click', () => {
+    if (state.inQueue) {
+        state.socket.emit('leave-queue');
+        state.inQueue = false;
+        joinQueueBtn.textContent = 'Join Queue';
+        joinQueueBtn.classList.remove('off');
+    } else {
+        state.socket.emit('join-queue');
+        state.inQueue = true;
+        joinQueueBtn.textContent = 'Leave Queue';
+        joinQueueBtn.classList.add('off');
+    }
+});
+
 leaveBtn.addEventListener('click', () => {
     state.socket.emit('leave-room');
+    state.inQueue = false;
 
     if (state.localStream) {
         state.localStream.getTracks().forEach(track => track.stop());
@@ -396,7 +627,7 @@ leaveBtn.addEventListener('click', () => {
     state.peers.clear();
     if (state.timerInterval) clearInterval(state.timerInterval);
 
-    showLanding();
+    showLanding(true);
 });
 
 skipBtn.addEventListener('click', () => {
@@ -405,6 +636,14 @@ skipBtn.addEventListener('click', () => {
         state.hasVotedSkip = true;
         updateSkipButton();
     }
+});
+
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text) return;
+    state.socket.emit('chat-message', { text });
+    chatInput.value = '';
 });
 
 function getRoomTypeLabel(type) {
@@ -417,6 +656,14 @@ function getRoomTypeLabel(type) {
     };
     return labels[type] || type;
 }
+
+const roomBackgrounds = {
+    conference: 'images/conferencehall.jpg',
+    stage: 'images/theatre.avif',
+    concert: 'images/concert.avif',
+    classroom: 'images/classroom.avif',
+    casual: 'images/coffeeshop.avif'
+};
 
 // Media controls
 cameraToggleBtn.addEventListener('click', () => {
@@ -432,6 +679,18 @@ cameraToggleBtn.addEventListener('click', () => {
             } else {
                 cameraToggleBtn.textContent = 'Camera OFF';
                 cameraToggleBtn.classList.add('off');
+            }
+
+            // Update local video display
+            if (state.currentSpeaker === state.userId) {
+                speakerVideo.classList.toggle('camera-off', !state.isCameraOn);
+            } else {
+                const container = document.getElementById(`container-${state.userId}`);
+                if (container) {
+                    const bg = roomBackgrounds[state.roomType] || '';
+                    container.classList.toggle('camera-off', !state.isCameraOn);
+                    container.style.backgroundImage = !state.isCameraOn && bg ? `url('${bg}')` : '';
+                }
             }
         }
     }
@@ -453,6 +712,15 @@ micToggleBtn.addEventListener('click', () => {
             }
         }
     }
+});
+
+// Collapsible panels on mobile
+document.querySelectorAll('.panel-toggle').forEach(toggle => {
+    toggle.addEventListener('click', () => {
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!expanded));
+        toggle.nextElementSibling.classList.toggle('collapsed', expanded);
+    });
 });
 
 // Initialize

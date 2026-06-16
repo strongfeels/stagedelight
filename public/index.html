@@ -4,7 +4,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StageDelight</title>
+    <title>StageDelight — Practice Public Speaking with Strangers</title>
+    <meta name="description" content="Free live practice rooms with webcam audiences, turn timers, and zero signup. Pick a venue, join the queue, and take the stage.">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="StageDelight — Practice Public Speaking with Strangers">
+    <meta property="og:description" content="Free live practice rooms with webcam audiences, turn timers, and zero signup. Pick a venue, join the queue, and take the stage.">
+    <meta property="og:image" content="/images/conferencehall.jpg">
+    <meta property="og:url" content="https://stagedelight.live">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="StageDelight — Practice Public Speaking with Strangers">
+    <meta name="twitter:description" content="Free live practice rooms with webcam audiences, turn timers, and zero signup.">
+    <meta name="twitter:image" content="/images/conferencehall.jpg">
+
+    <!-- Favicon (SVG spotlight icon) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b0b0c'/><path d='M32 8 L22 40 L42 40 Z' fill='%23c9a84c' opacity='0.3'/><circle cx='32' cy='10' r='5' fill='%23c9a84c'/><rect x='16' y='42' width='32' height='4' rx='2' fill='%23c9a84c' opacity='0.6'/></svg>">
+
+    <!-- Preload hero image -->
+    <link rel="preload" href="images/theatre.avif" as="image">
+
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,72 +34,132 @@
 
 <body>
 <div id="landing">
-    <div class="landing-inner">
-        <div class="brand">
-            <h1>StageDelight</h1>
-            <p class="tagline">Practice public speaking with strangers, instantly.</p>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">Stage<span class="gold">Delight</span></h1>
+            <p class="hero-tagline">Nervous speakers welcome. Judgment-free practice.</p>
+            <p class="hero-sub">Free live practice rooms with webcam audiences, turn timers, and zero signup.</p>
+            <a href="#venues" class="hero-cta">Choose your stage</a>
         </div>
+    </section>
 
-        <div id="roomTypes">
-            <h2>Pick a room</h2>
-            <div class="room-grid">
-                <div class="room-card" data-room-type="casual">
-                    <div class="room-card-top">
-                        <span class="room-label">Coffee Shop</span>
-                        <span class="room-duration">3 min</span>
-                    </div>
-                    <p>Relaxed atmosphere for casual talks</p>
+    <!-- How It Works -->
+    <section id="venues" class="how-it-works">
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                <h3>Pick a venue</h3>
+                <p>Choose from five rooms, each with a different vibe and time limit.</p>
+            </div>
+            <div class="step-connector" aria-hidden="true"></div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <h3>Join the queue</h3>
+                <p>Your camera turns on. Watch others speak while you wait your turn.</p>
+            </div>
+            <div class="step-connector" aria-hidden="true"></div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                <h3>Take the stage</h3>
+                <p>You are live. Speak, perform, or present until the timer runs out.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Venue Cards -->
+    <section class="venues">
+        <h2 class="venues-heading">Choose your stage</h2>
+        <div class="room-grid">
+            <div class="room-card" data-room-type="casual">
+                <div class="room-card-thumb">
+                    <img src="images/coffeeshop.avif" alt="Coffee Shop venue" loading="lazy">
+                    <span class="room-duration">3 min</span>
+                </div>
+                <div class="room-card-body">
+                    <span class="room-label">Coffee Shop</span>
+                    <p>Low stakes, casual conversation. Perfect for your first time or warming up.</p>
                     <div class="room-info">
-                        <span class="room-users" data-type="casual">0 online</span>
+                        <span class="room-users" data-type="casual"><span class="pulse-dot"></span> Join now</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="room-card" data-room-type="classroom">
-                    <div class="room-card-top">
-                        <span class="room-label">Classroom</span>
-                        <span class="room-duration">6 min</span>
-                    </div>
-                    <p>Educational setting for teaching practice</p>
+            <div class="room-card" data-room-type="classroom">
+                <div class="room-card-thumb">
+                    <img src="images/classroom.avif" alt="Classroom venue" loading="lazy">
+                    <span class="room-duration">6 min</span>
+                </div>
+                <div class="room-card-body">
+                    <span class="room-label">Classroom</span>
+                    <p>Teach something you know. Practice explaining ideas clearly to a small group.</p>
                     <div class="room-info">
-                        <span class="room-users" data-type="classroom">0 online</span>
+                        <span class="room-users" data-type="classroom"><span class="pulse-dot"></span> Join now</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="room-card" data-room-type="stage">
-                    <div class="room-card-top">
-                        <span class="room-label">Theater Stage</span>
-                        <span class="room-duration">9 min</span>
-                    </div>
-                    <p>Classic stage for dramatic performances</p>
+            <div class="room-card" data-room-type="concert">
+                <div class="room-card-thumb">
+                    <img src="images/concert.avif" alt="Concert Hall venue" loading="lazy">
+                    <span class="room-duration">9 min</span>
+                </div>
+                <div class="room-card-body">
+                    <span class="room-label">Concert Hall</span>
+                    <p>High energy. Bring a performance, a story, or a rant. The crowd is here for it.</p>
                     <div class="room-info">
-                        <span class="room-users" data-type="stage">0 online</span>
+                        <span class="room-users" data-type="concert"><span class="pulse-dot"></span> Join now</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="room-card" data-room-type="concert">
-                    <div class="room-card-top">
-                        <span class="room-label">Concert Hall</span>
-                        <span class="room-duration">12 min</span>
-                    </div>
-                    <p>High-energy venue for short performances</p>
+            <div class="room-card" data-room-type="stage">
+                <div class="room-card-thumb">
+                    <img src="images/theatre.avif" alt="Theater Stage venue" loading="lazy">
+                    <span class="room-duration">12 min</span>
+                </div>
+                <div class="room-card-body">
+                    <span class="room-label">Theater Stage</span>
+                    <p>The full experience. Deliver a prepared speech or improvise under the spotlight.</p>
                     <div class="room-info">
-                        <span class="room-users" data-type="concert">0 online</span>
+                        <span class="room-users" data-type="stage"><span class="pulse-dot"></span> Join now</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="room-card" data-room-type="conference">
-                    <div class="room-card-top">
-                        <span class="room-label">Conference Room</span>
-                        <span class="room-duration">15 min</span>
-                    </div>
-                    <p>Professional setting for business presentations</p>
+            <div class="room-card" data-room-type="conference">
+                <div class="room-card-thumb">
+                    <img src="images/conferencehall.jpg" alt="Conference Room venue" loading="lazy">
+                    <span class="room-duration">15 min</span>
+                </div>
+                <div class="room-card-body">
+                    <span class="room-label">Conference Room</span>
+                    <p>Business presentations, pitch practice, and professional speaking. Dress code optional.</p>
                     <div class="room-info">
-                        <span class="room-users" data-type="conference">0 online</span>
+                        <span class="room-users" data-type="conference"><span class="pulse-dot"></span> Join now</span>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
+
 </div>
 
 <!-- Room Page -->
@@ -105,10 +186,27 @@
             <div id="audience">
                 <!-- Audience videos will be added here dynamically -->
             </div>
+
+            <!-- Chat -->
+            <button id="chatToggle" class="panel-toggle" aria-expanded="false">
+                <span>Chat</span>
+                <span class="toggle-chevron">&#9660;</span>
+            </button>
+            <div id="chat" class="collapsible collapsed">
+                <div id="chatMessages"></div>
+                <form id="chatForm">
+                    <input type="text" id="chatInput" placeholder="Send a message..." maxlength="300" autocomplete="off">
+                    <button type="submit">Send</button>
+                </form>
+            </div>
         </div>
 
         <!-- Sidebar -->
-        <div id="sidebar">
+        <button id="sidebarToggle" class="panel-toggle" aria-expanded="false">
+            <span>Queue &amp; Controls</span>
+            <span class="toggle-chevron">&#9660;</span>
+        </button>
+        <div id="sidebar" class="collapsible collapsed">
             <div id="queue">
                 <h3>Queue</h3>
                 <div id="queueList">
@@ -116,10 +214,24 @@
                 </div>
             </div>
 
+            <div id="audience-list">
+                <h3>Audience</h3>
+                <div id="audienceList"></div>
+            </div>
+
             <div id="controls">
+                <button id="joinQueueBtn" class="btn-media">Join Queue</button>
                 <button id="voteStartBtn" class="hidden btn-start">Vote to Start (0/2)</button>
-                <button id="cameraToggleBtn" class="btn-media">Camera ON</button>
-                <button id="micToggleBtn" class="btn-media">Mic ON</button>
+                <div class="split-btn">
+                    <button id="cameraToggleBtn" class="btn-media">Camera ON</button>
+                    <button class="btn-media split-btn-arrow" data-device="video">&#9662;</button>
+                    <div id="cameraMenu" class="device-menu"></div>
+                </div>
+                <div class="split-btn">
+                    <button id="micToggleBtn" class="btn-media">Mic ON</button>
+                    <button class="btn-media split-btn-arrow" data-device="audio">&#9662;</button>
+                    <div id="micMenu" class="device-menu"></div>
+                </div>
                 <button id="skipBtn" class="btn-skip">Vote to Skip</button>
                 <button id="leaveBtn" class="btn-leave">Leave Room</button>
             </div>
