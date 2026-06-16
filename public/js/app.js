@@ -85,10 +85,18 @@ function initSocket() {
 
     state.socket.on('connect', () => {
         console.log('Connected to server');
+        const wasInRoom = state.roomType && room.style.display === 'flex';
         state.userId = state.socket.id;
 
-        // Auto-join if URL contains a room type (e.g. /casual)
-        if (window.location.pathname.length > 1) {
+        // Close stale peer connections from before reconnect
+        state.peers.forEach(pc => pc.close());
+        state.peers.clear();
+
+        if (wasInRoom && state.localStream) {
+            // Reconnect: re-join the same room with existing stream
+            state.socket.emit('join-room', { roomType: state.roomType });
+        } else if (window.location.pathname.length > 1) {
+            // Fresh page load with room URL
             autoJoinFromUrl();
         }
     });
@@ -106,6 +114,7 @@ function initSocket() {
         state.names = data.names || {};
 
         roomIdDisplay.textContent = getRoomTypeLabel(data.roomType);
+        audienceContainer.innerHTML = '';
         chatMessages.innerHTML = '';
         state.inQueue = false;
         state.hasVotedStart = false;
