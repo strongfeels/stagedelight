@@ -447,6 +447,173 @@ button:disabled {
     text-align: center;
 }
 
+/* ── Tablet portrait ──────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    #sidebar {
+        width: 200px;
+    }
+
+    #sidebar .queue-item {
+        font-size: 0.8rem;
+        padding: 8px 10px;
+    }
+}
+
+/* ── Phone ────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    #landing {
+        padding: 24px 16px;
+    }
+
+    .brand h1 {
+        font-size: 1.8rem;
+    }
+
+    .tagline {
+        margin-bottom: 32px;
+    }
+
+    .room-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #header {
+        padding: 10px 14px;
+        gap: 8px;
+    }
+
+    .header-left {
+        font-size: 0.75rem;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    #timer {
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    #skipVotes {
+        font-size: 0.7rem;
+        white-space: nowrap;
+    }
+
+    #main {
+        flex-direction: column;
+        padding: 12px;
+        gap: 12px;
+        overflow-y: auto;
+    }
+
+    #videoArea {
+        flex: none;
+    }
+
+    #speaker {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+    }
+
+    #speaker video {
+        width: 90px;
+        height: 120px;
+    }
+
+    #speakerName {
+        bottom: 8px;
+        left: 8px;
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+
+    #audience {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        flex: none;
+    }
+
+    #sidebar {
+        width: 100%;
+        flex-shrink: 1;
+    }
+
+    #controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    #controls button {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 10px 12px;
+        font-size: 0.78rem;
+    }
+}
+
+/* ── Small phones (iPhone SE etc.) ───────────────────────────────────────── */
+@media (max-width: 375px) {
+    .brand h1 {
+        font-size: 1.5rem;
+    }
+
+    .room-card {
+        padding: 14px 16px;
+    }
+
+    .room-label {
+        font-size: 0.85rem;
+    }
+
+    #main {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    #speaker video {
+        width: 70px;
+        height: 94px;
+    }
+
+    #controls button {
+        padding: 8px 8px;
+        font-size: 0.72rem;
+    }
+}
+
+/* ── Phone landscape ─────────────────────────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+    #main {
+        flex-direction: row;
+        padding: 8px;
+        gap: 8px;
+        overflow-y: auto;
+    }
+
+    #videoArea {
+        flex: 1;
+        min-width: 0;
+    }
+
+    #speaker {
+        aspect-ratio: 16 / 9;
+    }
+
+    #audience {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        flex: none;
+    }
+
+    #sidebar {
+        width: 180px;
+        flex-shrink: 0;
+        overflow-y: auto;
+    }
+
+    #controls button {
+        padding: 6px 8px;
+        font-size: 0.72rem;
+    }
+}
+
 /* ── Utilities ────────────────────────────────────────────────────────────── */
 .hidden {
     display: none !important;
