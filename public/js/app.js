@@ -118,6 +118,7 @@ function initSocket() {
         state.myName = data.yourName;
         state.names = data.names || {};
 
+        dismissTransition();
         roomIdDisplay.textContent = getRoomTypeLabel(data.roomType);
         audienceContainer.innerHTML = '';
         chatMessages.innerHTML = '';
