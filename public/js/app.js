@@ -9,6 +9,7 @@ const state = {
     currentSpeaker: null,
     queue: [],
     timerInterval: null,
+    transitionInterval: null,
     hasVotedSkip: false,
     hasVotedStart: false,
     hasStarted: false,
@@ -44,6 +45,10 @@ const micMenu = document.getElementById('micMenu');
 const chatForm = document.getElementById('chatForm');
 const chatInput = document.getElementById('chatInput');
 const chatMessages = document.getElementById('chatMessages');
+
+const speakerTransition = document.getElementById('speakerTransition');
+const transitionNameEl = speakerTransition.querySelector('.transition-name');
+const transitionCountdownEl = speakerTransition.querySelector('.transition-countdown');
 
 const VALID_ROOMS = ['conference', 'stage', 'concert', 'classroom', 'casual'];
 
@@ -126,6 +131,23 @@ function initSocket() {
         skipBtn.textContent = 'Vote to Skip';
         updateQueue(data.queue);
         updateAudience(data.audience);
+
+        // Sync camera/mic button states with actual track state (preserves across reconnect)
+        if (state.localStream) {
+            const videoTrack = state.localStream.getVideoTracks()[0];
+            const audioTrack = state.localStream.getAudioTracks()[0];
+            if (videoTrack) {
+                state.isCameraOn = videoTrack.enabled;
+                cameraToggleBtn.textContent = state.isCameraOn ? 'Camera ON' : 'Camera OFF';
+                cameraToggleBtn.classList.toggle('off', !state.isCameraOn);
+            }
+            if (audioTrack) {
+                state.isMicOn = audioTrack.enabled;
+                micToggleBtn.textContent = state.isMicOn ? 'Mic ON' : 'Mic OFF';
+                micToggleBtn.classList.toggle('off', !state.isMicOn);
+            }
+        }
+
         showRoom();
         if (window.location.pathname !== `/${data.roomType}`) {
             history.pushState({ roomType: data.roomType }, '', `/${data.roomType}`);
@@ -153,13 +175,39 @@ function initSocket() {
     state.socket.on('room-started', (data) => {
         state.hasStarted = true;
         voteStartBtn.classList.add('hidden');
-        state.currentSpeaker = data.speakerId;
+        dismissTransition();
         updateSpeakerDisplay({ speakerId: data.speakerId });
         startTimer(data.remainingTime);
     });
 
+    state.socket.on('speaker-transition', (data) => {
+        // Show the transition overlay
+        transitionNameEl.textContent = data.name;
+        transitionCountdownEl.textContent = data.duration;
+        speakerTransition.classList.add('active');
+
+        // Stop the current timer display
+        if (state.timerInterval) clearInterval(state.timerInterval);
+        timerDisplay.textContent = '';
+        timerDisplay.style.color = '';
+
+        // Client-side countdown on the overlay
+        if (state.transitionInterval) clearInterval(state.transitionInterval);
+        let count = data.duration;
+        state.transitionInterval = setInterval(() => {
+            count--;
+            if (count <= 0) {
+                clearInterval(state.transitionInterval);
+                state.transitionInterval = null;
+                transitionCountdownEl.textContent = '';
+            } else {
+                transitionCountdownEl.textContent = count;
+            }
+        }, 1000);
+    });
+
     state.socket.on('speaker-changed', (data) => {
-        state.currentSpeaker = data.speakerId;
+        dismissTransition();
         state.hasVotedSkip = false;
         updateSpeakerDisplay(data);
         startTimer(data.remainingTime);
@@ -580,12 +628,27 @@ function updateSpeakerDisplay(data) {
     if (data.speakerId === state.userId) {
         speakerVideo.srcObject = state.localStream;
         speakerVideo.muted = true;
+        // Remove self from audience grid since we're on stage
+        const selfContainer = document.getElementById(`container-${state.userId}`);
+        if (selfContainer) selfContainer.remove();
     } else {
         const stream = getStreamFromPeer(data.speakerId);
         if (stream) {
             speakerVideo.srcObject = stream;
             speakerVideo.muted = false;
         }
+        // Ensure local user has a self-view in audience grid
+        if (state.localStream && !document.getElementById(`container-${state.userId}`)) {
+            addToAudienceGrid(state.userId, state.localStream);
+        }
+    }
+}
+
+function dismissTransition() {
+    speakerTransition.classList.remove('active');
+    if (state.transitionInterval) {
+        clearInterval(state.transitionInterval);
+        state.transitionInterval = null;
     }
 }
 
@@ -669,6 +732,7 @@ leaveBtn.addEventListener('click', () => {
     state.peers.clear();
     state.names = {};
     if (state.timerInterval) clearInterval(state.timerInterval);
+    dismissTransition();
 
     // Clear stale DOM elements
     audienceContainer.innerHTML = '';

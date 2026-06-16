@@ -37,6 +37,8 @@ const SPEAKER_NAMES = [
     'Hermione', 'Elrond', 'Rafiki', 'Minerva', 'Groot'
 ];
 
+const TRANSITION_SECS = 5;
+
 // Room management
 class Room {
     constructor(id, roomType) {
@@ -50,8 +52,18 @@ class Room {
         this.hasStarted = false;
         this.startVotes = new Set();
         this.speakerStartedAt = null;
+        this.transitionTimer = null;
+        this.transitionStartedAt = null;
         this.availableNames = [...SPEAKER_NAMES].sort(() => Math.random() - 0.5);
         this.nameMap = new Map(); // socketId -> display name
+    }
+
+    clearTransition() {
+        if (this.transitionTimer) {
+            clearTimeout(this.transitionTimer);
+            this.transitionTimer = null;
+            this.transitionStartedAt = null;
+        }
     }
 
     addUser(socketId) {
@@ -251,6 +263,38 @@ function getRoomStats() {
     return stats;
 }
 
+function transitionToSpeaker(currentRoom) {
+    currentRoom.clearTransition();
+
+    const newSpeaker = currentRoom.getCurrentSpeaker();
+    if (!newSpeaker) return;
+
+    currentRoom.transitionStartedAt = Date.now();
+
+    io.to(`room-${currentRoom.id}`).emit('speaker-transition', {
+        speakerId: newSpeaker.id,
+        name: currentRoom.getName(newSpeaker.id),
+        duration: TRANSITION_SECS
+    });
+
+    currentRoom.transitionTimer = setTimeout(() => {
+        currentRoom.transitionTimer = null;
+        currentRoom.transitionStartedAt = null;
+
+        if (!rooms.has(currentRoom.id)) return;
+        if (currentRoom.isEmpty()) return;
+
+        currentRoom.speakerStartedAt = Date.now();
+        const speaker = currentRoom.getCurrentSpeaker();
+        if (speaker) {
+            io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
+                speakerId: speaker.id,
+                remainingTime: currentRoom.config.duration
+            });
+        }
+    }, TRANSITION_SECS * 1000);
+}
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
@@ -274,6 +318,7 @@ io.on('connection', (socket) => {
             }
             socket.leave(`room-${currentRoom.id}`);
             if (currentRoom.isEmpty()) {
+                currentRoom.clearTransition();
                 rooms.delete(currentRoom.id);
             }
         }
@@ -308,12 +353,26 @@ io.on('connection', (socket) => {
         io.emit('room-stats', getRoomStats());
 
         if (currentRoom.hasStarted) {
-            const currentSpeaker = currentRoom.getCurrentSpeaker();
-            if (currentSpeaker) {
-                socket.emit('speaker-changed', {
-                    speakerId: currentSpeaker.id,
-                    remainingTime: currentRoom.getRemainingTime()
-                });
+            if (currentRoom.transitionTimer) {
+                // Room is mid-transition — show them the overlay
+                const nextSpeaker = currentRoom.getCurrentSpeaker();
+                if (nextSpeaker) {
+                    const elapsed = Math.floor((Date.now() - currentRoom.transitionStartedAt) / 1000);
+                    const remaining = Math.max(1, TRANSITION_SECS - elapsed);
+                    socket.emit('speaker-transition', {
+                        speakerId: nextSpeaker.id,
+                        name: currentRoom.getName(nextSpeaker.id),
+                        duration: remaining
+                    });
+                }
+            } else {
+                const currentSpeaker = currentRoom.getCurrentSpeaker();
+                if (currentSpeaker) {
+                    socket.emit('speaker-changed', {
+                        speakerId: currentSpeaker.id,
+                        remainingTime: currentRoom.getRemainingTime()
+                    });
+                }
             }
         } else {
             // Send start vote status
@@ -385,11 +444,7 @@ io.on('connection', (socket) => {
             io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
 
             if (wasSpeaking && currentRoom.hasStarted && currentRoom.queue.length > 0) {
-                const newSpeaker = currentRoom.getCurrentSpeaker();
-                io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                    speakerId: newSpeaker.id,
-                    remainingTime: currentRoom.getRemainingTime()
-                });
+                transitionToSpeaker(currentRoom);
             }
         } else {
             socket.emit('queue-status', { inQueue: false });
@@ -407,11 +462,7 @@ io.on('connection', (socket) => {
             io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
 
             if (wasSpeaking && currentRoom.hasStarted && currentRoom.queue.length > 0) {
-                const newSpeaker = currentRoom.getCurrentSpeaker();
-                io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                    speakerId: newSpeaker.id,
-                    remainingTime: currentRoom.getRemainingTime()
-                });
+                transitionToSpeaker(currentRoom);
             }
 
             // Update skip vote count for remaining users
@@ -423,6 +474,7 @@ io.on('connection', (socket) => {
             }
 
             if (currentRoom.isEmpty()) {
+                currentRoom.clearTransition();
                 rooms.delete(currentRoom.id);
             }
 
@@ -444,9 +496,7 @@ io.on('connection', (socket) => {
             if (currentRoom.skipVotes.size === 0) {
                 const newSpeaker = currentRoom.getCurrentSpeaker();
                 if (newSpeaker) {
-                    io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                        speakerId: newSpeaker.id
-                    });
+                    transitionToSpeaker(currentRoom);
                     io.to(`room-${currentRoom.id}`).emit('queue-updated', currentRoom.queue);
                     io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
                 }
@@ -466,9 +516,7 @@ io.on('connection', (socket) => {
                 const newSpeaker = currentRoom.getCurrentSpeaker();
 
                 if (newSpeaker) {
-                    io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                        speakerId: newSpeaker.id
-                    });
+                    transitionToSpeaker(currentRoom);
                     io.to(`room-${currentRoom.id}`).emit('queue-updated', currentRoom.queue);
                     io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
                 }
@@ -524,11 +572,7 @@ io.on('connection', (socket) => {
             io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
 
             if (wasSpeaking && currentRoom.hasStarted && currentRoom.queue.length > 0) {
-                const newSpeaker = currentRoom.getCurrentSpeaker();
-                io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                    speakerId: newSpeaker.id,
-                    remainingTime: currentRoom.getRemainingTime()
-                });
+                transitionToSpeaker(currentRoom);
             }
 
             if (!currentRoom.isEmpty()) {
@@ -539,6 +583,7 @@ io.on('connection', (socket) => {
             }
 
             if (currentRoom.isEmpty()) {
+                currentRoom.clearTransition();
                 rooms.delete(currentRoom.id);
             }
 
