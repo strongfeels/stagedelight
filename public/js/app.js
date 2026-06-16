@@ -138,6 +138,12 @@ function initSocket() {
     state.socket.on('user-left', (userId) => {
         delete state.names[userId];
         removePeer(userId);
+        // Also remove from speaker display if they were speaking
+        if (state.currentSpeaker === userId) {
+            speakerVideo.srcObject = null;
+            speakerName.textContent = 'Waiting for speaker...';
+            state.currentSpeaker = null;
+        }
     });
 
     // WebRTC signaling
@@ -155,6 +161,17 @@ function initSocket() {
 
     state.socket.on('ice-candidate', async (data) => {
         await handleIceCandidate(data);
+    });
+
+    state.socket.on('queue-status', (data) => {
+        state.inQueue = data.inQueue;
+        if (state.inQueue) {
+            joinQueueBtn.textContent = 'Leave Queue';
+            joinQueueBtn.classList.add('off');
+        } else {
+            joinQueueBtn.textContent = 'Join Queue';
+            joinQueueBtn.classList.remove('off');
+        }
     });
 
     state.socket.on('name-assigned', (data) => {
@@ -605,14 +622,8 @@ voteStartBtn.addEventListener('click', () => {
 joinQueueBtn.addEventListener('click', () => {
     if (state.inQueue) {
         state.socket.emit('leave-queue');
-        state.inQueue = false;
-        joinQueueBtn.textContent = 'Join Queue';
-        joinQueueBtn.classList.remove('off');
     } else {
         state.socket.emit('join-queue');
-        state.inQueue = true;
-        joinQueueBtn.textContent = 'Leave Queue';
-        joinQueueBtn.classList.add('off');
     }
 });
 
@@ -622,10 +633,19 @@ leaveBtn.addEventListener('click', () => {
 
     if (state.localStream) {
         state.localStream.getTracks().forEach(track => track.stop());
+        state.localStream = null;
     }
     state.peers.forEach(pc => pc.close());
     state.peers.clear();
+    state.names = {};
     if (state.timerInterval) clearInterval(state.timerInterval);
+
+    // Clear stale DOM elements
+    audienceContainer.innerHTML = '';
+    chatMessages.innerHTML = '';
+    queueList.innerHTML = '';
+    audienceListEl.innerHTML = '';
+    speakerVideo.srcObject = null;
 
     showLanding(true);
 });

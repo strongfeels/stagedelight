@@ -135,6 +135,7 @@ class Room {
 
     voteToStart(socketId) {
         if (this.hasStarted) return null;
+        if (this.queue.length === 0) return null;
 
         this.startVotes.add(socketId);
 
@@ -252,6 +253,18 @@ io.on('connection', (socket) => {
     socket.emit('room-stats', getRoomStats());
 
     socket.on('join-room', (data) => {
+        // Clean up previous room if any
+        if (currentRoom) {
+            currentRoom.removeUser(socket.id);
+            socket.to(`room-${currentRoom.id}`).emit('user-left', socket.id);
+            io.to(`room-${currentRoom.id}`).emit('queue-updated', currentRoom.queue);
+            io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
+            socket.leave(`room-${currentRoom.id}`);
+            if (currentRoom.isEmpty()) {
+                rooms.delete(currentRoom.id);
+            }
+        }
+
         const roomType = data.roomType || 'conference';
         currentRoom = findOrCreateRoom(roomType);
         socket.join(`room-${currentRoom.id}`);
@@ -306,12 +319,15 @@ io.on('connection', (socket) => {
     socket.on('vote-to-start', () => {
         if (currentRoom && !currentRoom.hasStarted) {
             const result = currentRoom.voteToStart(socket.id);
+            if (!result) return;
 
             if (result.started) {
                 const speaker = currentRoom.getCurrentSpeaker();
-                io.to(`room-${currentRoom.id}`).emit('room-started', {
-                    speakerId: speaker.id
-                });
+                if (speaker) {
+                    io.to(`room-${currentRoom.id}`).emit('room-started', {
+                        speakerId: speaker.id
+                    });
+                }
             } else {
                 io.to(`room-${currentRoom.id}`).emit('start-votes-updated', {
                     votes: result.votes,
@@ -325,8 +341,12 @@ io.on('connection', (socket) => {
     socket.on('join-queue', () => {
         if (currentRoom) {
             currentRoom.joinQueue(socket.id);
+            const inQueue = currentRoom.queue.some(u => u.id === socket.id);
+            socket.emit('queue-status', { inQueue });
             io.to(`room-${currentRoom.id}`).emit('queue-updated', currentRoom.queue);
             io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
+        } else {
+            socket.emit('queue-status', { inQueue: false });
         }
     });
 
@@ -334,6 +354,7 @@ io.on('connection', (socket) => {
         if (currentRoom) {
             const wasSpeaking = currentRoom.getCurrentSpeaker()?.id === socket.id;
             currentRoom.leaveQueue(socket.id);
+            socket.emit('queue-status', { inQueue: false });
             io.to(`room-${currentRoom.id}`).emit('queue-updated', currentRoom.queue);
             io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
 
@@ -343,6 +364,8 @@ io.on('connection', (socket) => {
                     speakerId: newSpeaker.id
                 });
             }
+        } else {
+            socket.emit('queue-status', { inQueue: false });
         }
     });
 
