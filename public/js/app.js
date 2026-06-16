@@ -45,9 +45,23 @@ const chatForm = document.getElementById('chatForm');
 const chatInput = document.getElementById('chatInput');
 const chatMessages = document.getElementById('chatMessages');
 
+const VALID_ROOMS = ['conference', 'stage', 'concert', 'classroom', 'casual'];
+
+async function autoJoinFromUrl() {
+    const roomType = window.location.pathname.slice(1).toLowerCase();
+    if (!VALID_ROOMS.includes(roomType)) return;
+
+    const hasMedia = await getUserMedia();
+    if (hasMedia) {
+        state.roomType = roomType;
+        state.socket.emit('join-room', { roomType });
+    }
+}
+
 function displayName(userId) {
-    if (userId === state.userId) return 'You';
-    return state.names[userId] || `User ${userId.slice(-4)}`;
+    const name = state.names[userId] || `User ${userId.slice(-4)}`;
+    if (userId === state.userId) return `${name} (you)`;
+    return name;
 }
 
 // Room type selection
@@ -72,6 +86,11 @@ function initSocket() {
     state.socket.on('connect', () => {
         console.log('Connected to server');
         state.userId = state.socket.id;
+
+        // Auto-join if URL contains a room type (e.g. /casual)
+        if (window.location.pathname.length > 1) {
+            autoJoinFromUrl();
+        }
     });
 
     state.socket.on('room-stats', (stats) => {
@@ -89,11 +108,19 @@ function initSocket() {
         roomIdDisplay.textContent = getRoomTypeLabel(data.roomType);
         chatMessages.innerHTML = '';
         state.inQueue = false;
+        state.hasVotedStart = false;
+        state.hasVotedSkip = false;
         joinQueueBtn.textContent = 'Join Queue';
         joinQueueBtn.classList.remove('off');
+        voteStartBtn.disabled = false;
+        skipBtn.disabled = false;
+        skipBtn.textContent = 'Vote to Skip';
         updateQueue(data.queue);
         updateAudience(data.audience);
         showRoom();
+        if (window.location.pathname !== `/${data.roomType}`) {
+            history.pushState({ roomType: data.roomType }, '', `/${data.roomType}`);
+        }
 
         if (!data.hasStarted) {
             voteStartBtn.classList.remove('hidden');
@@ -180,7 +207,7 @@ function initSocket() {
 
     // Chat messages
     state.socket.on('chat-message', (data) => {
-        const name = data.userId === state.userId ? 'You' : (data.name || displayName(data.userId));
+        const name = data.name || state.names[data.userId] || `User ${data.userId.slice(-4)}`;
         const msg = document.createElement('div');
         msg.className = 'chat-msg';
         msg.innerHTML = `<span class="chat-user">${name}</span><span class="chat-text">${data.text}</span>`;
@@ -530,8 +557,7 @@ function updateAudience(audience) {
 }
 
 function updateSpeakerDisplay(data) {
-    const isYou = data.speakerId === state.userId;
-    speakerName.textContent = isYou ? `${state.myName} (You)` : displayName(data.speakerId);
+    speakerName.textContent = displayName(data.speakerId);
 
     state.currentSpeaker = data.speakerId;
 
@@ -648,6 +674,9 @@ leaveBtn.addEventListener('click', () => {
     speakerVideo.srcObject = null;
 
     showLanding(true);
+    if (window.location.pathname !== '/') {
+        history.pushState(null, '', '/');
+    }
 });
 
 skipBtn.addEventListener('click', () => {
@@ -745,3 +774,10 @@ document.querySelectorAll('.panel-toggle').forEach(toggle => {
 
 // Initialize
 initSocket();
+
+// Handle browser back/forward
+window.addEventListener('popstate', () => {
+    if (room.style.display === 'flex') {
+        leaveBtn.click();
+    }
+});

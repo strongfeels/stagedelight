@@ -20,6 +20,15 @@ const ROOM_CONFIGS = {
     casual: { duration: 3 * 60, label: '☕ Coffee Shop', minVotesToStart: 2 }
 };
 
+// Serve index.html for valid room type URLs (e.g. /casual, /stage)
+app.get('/:roomType', (req, res, next) => {
+    if (ROOM_CONFIGS[req.params.roomType]) {
+        res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    } else {
+        next();
+    }
+});
+
 // Display names pool
 const SPEAKER_NAMES = [
     'Gandalf', 'Atticus', 'Tyrion', 'Morpheus', 'Aragorn',
@@ -135,7 +144,6 @@ class Room {
 
     voteToStart(socketId) {
         if (this.hasStarted) return null;
-        if (this.queue.length === 0) return null;
 
         this.startVotes.add(socketId);
 
