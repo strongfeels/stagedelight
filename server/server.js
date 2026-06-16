@@ -49,7 +49,7 @@ class Room {
         this.currentSpeakerIndex = 0;
         this.hasStarted = false;
         this.startVotes = new Set();
-        this.startTimeout = null;
+        this.speakerStartedAt = null;
         this.availableNames = [...SPEAKER_NAMES].sort(() => Math.random() - 0.5);
         this.nameMap = new Map(); // socketId -> display name
     }
@@ -74,12 +74,13 @@ class Room {
 
         this.queue.push({ id: socketId });
 
-        // Set timeout for auto-start after 5 minutes
-        if (this.queue.length === 1 && !this.hasStarted) {
-            this.startTimeout = setTimeout(() => {
-                this.forceStart();
-            }, 5 * 60 * 1000);
+        // Auto-start if enough votes were already cast but queue was empty
+        if (!this.hasStarted && this.startVotes.size >= this.config.minVotesToStart) {
+            this.forceStart();
+            return { autoStarted: true };
         }
+
+        return null;
     }
 
     leaveQueue(socketId) {
@@ -135,11 +136,6 @@ class Room {
             }
         }
 
-        // Clear timeout if room becomes empty
-        if (this.queue.length === 0 && this.startTimeout) {
-            clearTimeout(this.startTimeout);
-            this.startTimeout = null;
-        }
     }
 
     voteToStart(socketId) {
@@ -148,7 +144,7 @@ class Room {
         this.startVotes.add(socketId);
 
         const needed = this.config.minVotesToStart;
-        if (this.startVotes.size >= needed) {
+        if (this.startVotes.size >= needed && this.queue.length > 0) {
             this.forceStart();
             return { started: true };
         }
@@ -165,10 +161,6 @@ class Room {
 
         this.hasStarted = true;
         this.startVotes.clear();
-        if (this.startTimeout) {
-            clearTimeout(this.startTimeout);
-            this.startTimeout = null;
-        }
         if (this.queue.length > 0) {
             this.startNextSpeaker();
         }
@@ -202,7 +194,14 @@ class Room {
 
     startNextSpeaker() {
         this.skipVotes.clear();
+        this.speakerStartedAt = Date.now();
         return this.getCurrentSpeaker();
+    }
+
+    getRemainingTime() {
+        if (!this.speakerStartedAt) return this.config.duration;
+        const elapsed = Math.floor((Date.now() - this.speakerStartedAt) / 1000);
+        return Math.max(0, this.config.duration - elapsed);
     }
 
     getCurrentSpeaker() {
@@ -306,7 +305,8 @@ io.on('connection', (socket) => {
             const currentSpeaker = currentRoom.getCurrentSpeaker();
             if (currentSpeaker) {
                 socket.emit('speaker-changed', {
-                    speakerId: currentSpeaker.id
+                    speakerId: currentSpeaker.id,
+                    remainingTime: currentRoom.getRemainingTime()
                 });
             }
         } else {
@@ -333,7 +333,8 @@ io.on('connection', (socket) => {
                 const speaker = currentRoom.getCurrentSpeaker();
                 if (speaker) {
                     io.to(`room-${currentRoom.id}`).emit('room-started', {
-                        speakerId: speaker.id
+                        speakerId: speaker.id,
+                        remainingTime: currentRoom.getRemainingTime()
                     });
                 }
             } else {
@@ -348,11 +349,22 @@ io.on('connection', (socket) => {
 
     socket.on('join-queue', () => {
         if (currentRoom) {
-            currentRoom.joinQueue(socket.id);
+            const result = currentRoom.joinQueue(socket.id);
             const inQueue = currentRoom.queue.some(u => u.id === socket.id);
             socket.emit('queue-status', { inQueue });
             io.to(`room-${currentRoom.id}`).emit('queue-updated', currentRoom.queue);
             io.to(`room-${currentRoom.id}`).emit('audience-updated', currentRoom.getAudience());
+
+            // If joining the queue triggered auto-start
+            if (result && result.autoStarted) {
+                const speaker = currentRoom.getCurrentSpeaker();
+                if (speaker) {
+                    io.to(`room-${currentRoom.id}`).emit('room-started', {
+                        speakerId: speaker.id,
+                        remainingTime: currentRoom.getRemainingTime()
+                    });
+                }
+            }
         } else {
             socket.emit('queue-status', { inQueue: false });
         }
@@ -369,7 +381,8 @@ io.on('connection', (socket) => {
             if (wasSpeaking && currentRoom.hasStarted && currentRoom.queue.length > 0) {
                 const newSpeaker = currentRoom.getCurrentSpeaker();
                 io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                    speakerId: newSpeaker.id
+                    speakerId: newSpeaker.id,
+                    remainingTime: currentRoom.getRemainingTime()
                 });
             }
         } else {
@@ -390,7 +403,8 @@ io.on('connection', (socket) => {
             if (wasSpeaking && currentRoom.hasStarted && currentRoom.queue.length > 0) {
                 const newSpeaker = currentRoom.getCurrentSpeaker();
                 io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                    speakerId: newSpeaker.id
+                    speakerId: newSpeaker.id,
+                    remainingTime: currentRoom.getRemainingTime()
                 });
             }
 
@@ -498,7 +512,8 @@ io.on('connection', (socket) => {
             if (wasSpeaking && currentRoom.hasStarted && currentRoom.queue.length > 0) {
                 const newSpeaker = currentRoom.getCurrentSpeaker();
                 io.to(`room-${currentRoom.id}`).emit('speaker-changed', {
-                    speakerId: newSpeaker.id
+                    speakerId: newSpeaker.id,
+                    remainingTime: currentRoom.getRemainingTime()
                 });
             }
 

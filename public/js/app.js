@@ -146,14 +146,14 @@ function initSocket() {
         voteStartBtn.classList.add('hidden');
         state.currentSpeaker = data.speakerId;
         updateSpeakerDisplay({ speakerId: data.speakerId });
-        startTimer();
+        startTimer(data.remainingTime);
     });
 
     state.socket.on('speaker-changed', (data) => {
         state.currentSpeaker = data.speakerId;
         state.hasVotedSkip = false;
         updateSpeakerDisplay(data);
-        startTimer();
+        startTimer(data.remainingTime);
         updateSkipButton();
     });
 
@@ -586,10 +586,10 @@ function updateSpeakerDisplay(data) {
     }
 }
 
-function startTimer() {
+function startTimer(remainingTime) {
     if (state.timerInterval) clearInterval(state.timerInterval);
 
-    let secondsLeft = state.maxDuration;
+    let secondsLeft = remainingTime != null ? remainingTime : state.maxDuration;
     const warningTime = 120; // 2 minutes warning
 
     // Display initial time
@@ -642,6 +642,7 @@ voteStartBtn.addEventListener('click', () => {
         state.socket.emit('vote-to-start');
         state.hasVotedStart = true;
         voteStartBtn.disabled = true;
+        voteStartBtn.textContent = 'Vote Counted';
     }
 });
 
