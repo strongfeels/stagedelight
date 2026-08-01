@@ -29,6 +29,7 @@ const voteStartBtn = document.getElementById('voteStartBtn');
 const leaveBtn = document.getElementById('leaveBtn');
 const skipBtn = document.getElementById('skipBtn');
 const speakerVideo = document.getElementById('speakerVideo');
+const speakerStatus = document.getElementById('speakerStatus');
 const speakerName = document.getElementById('speakerName');
 const audienceContainer = document.getElementById('audience');
 const queueList = document.getElementById('queueList');
@@ -425,10 +426,34 @@ document.addEventListener('click', () => {
 });
 
 // WebRTC Functions
+
+// The ICE servers come from the server, so TURN credentials stay out of this
+// file. They are short-lived, so the answer is cached for a while rather than
+// forever — a tab left open all afternoon would otherwise hold expired ones.
+const ICE_CACHE_MS = 30 * 60 * 1000;
+const STUN_ONLY = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const PEER_BLOCKED = "Couldn't connect — their network is blocking the video";
+let iceConfig = null;
+let iceConfigAt = 0;
+
+async function getIceConfig() {
+    if (iceConfig && Date.now() - iceConfigAt < ICE_CACHE_MS) return iceConfig;
+    try {
+        const res = await fetch('/api/ice');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        iceConfig = await res.json();
+    } catch (err) {
+        // Never block a call on this: STUN alone is what the app did before,
+        // and it is enough on most home networks.
+        console.warn('Could not fetch ICE config, falling back to STUN:', err);
+        iceConfig = STUN_ONLY;
+    }
+    iceConfigAt = Date.now();
+    return iceConfig;
+}
+
 async function createPeerConnection(userId, isInitiator) {
-    const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
+    const pc = new RTCPeerConnection(await getIceConfig());
 
     state.localStream.getTracks().forEach(track => {
         pc.addTrack(track, state.localStream);
@@ -436,6 +461,36 @@ async function createPeerConnection(userId, isInitiator) {
 
     pc.ontrack = (event) => {
         addRemoteStream(userId, event.streams[0]);
+    };
+
+    // Without this a peer that can't connect produces nothing visible at all.
+    // ontrack fires as soon as the SDP is negotiated, well before any media
+    // arrives, so the tile gets a stream object and then stays black forever —
+    // and ICE takes about 15 seconds to admit defeat. Say what is happening.
+    pc.onconnectionstatechange = async () => {
+        // A failure is sometimes just a network change — wifi to cellular —
+        // rather than a permanently blocked path, so try once more with fresh
+        // candidates. Only the side that sent the original offer retries, so
+        // the two ends don't renegotiate over each other.
+        if (pc.connectionState === 'failed' && isInitiator && !pc._restarted) {
+            pc._restarted = true;
+            refreshPeerStatus(userId);
+            try {
+                const offer = await pc.createOffer({ iceRestart: true });
+                await pc.setLocalDescription(offer);
+                state.socket.emit('offer', { to: userId, offer: offer });
+            } catch (err) {
+                // The retry never got off the ground, and no further state
+                // change is coming, so settle it here.
+                console.warn('ICE restart failed:', err);
+                pc._restarted = false;
+                refreshPeerStatus(userId);
+                reportOutcome(pc);
+            }
+            return;
+        }
+        refreshPeerStatus(userId);
+        reportOutcome(pc);
     };
 
     pc.onicecandidate = (event) => {
@@ -448,6 +503,7 @@ async function createPeerConnection(userId, isInitiator) {
     };
 
     state.peers.set(userId, pc);
+    refreshPeerStatus(userId);   // shows "Connecting…" straight away
 
     if (isInitiator) {
         const offer = await pc.createOffer();
@@ -588,28 +644,121 @@ function getStreamFromPeer(userId) {
     return stream.getTracks().length > 0 ? stream : null;
 }
 
-function addToAudienceGrid(userId, stream) {
-    if (!stream) return;
-    let videoEl = document.getElementById(`audience-${userId}`);
-    if (!videoEl) {
-        const container = document.createElement('div');
+// A tile has to exist before the video arrives, because a peer that never
+// connects still needs somewhere to say so.
+function ensureAudienceTile(userId) {
+    let container = document.getElementById(`container-${userId}`);
+    if (!container) {
+        container = document.createElement('div');
         container.className = 'audience-video';
         container.id = `container-${userId}`;
         container.innerHTML = `
             <video id="audience-${userId}" autoplay playsinline></video>
             <div class="audience-name">${displayName(userId)}</div>
+            <div class="peer-status" id="status-${userId}" hidden></div>
         `;
         audienceContainer.appendChild(container);
-        videoEl = document.getElementById(`audience-${userId}`);
     }
+    return container;
+}
+
+function addToAudienceGrid(userId, stream) {
+    if (!stream) return;
+    ensureAudienceTile(userId);
+    const videoEl = document.getElementById(`audience-${userId}`);
     videoEl.srcObject = stream;
     videoEl.muted = (userId === state.userId);
+    // Your own tile is a local preview and has no connection to report on.
+    if (userId !== state.userId) refreshPeerStatus(userId);
+}
+
+// Tell the server how this connection turned out, once per peer. Only the
+// first settled outcome is sent: a call that connects and later drops is a
+// different question from one that never connected at all, and it is the
+// second that decides whether a relay is needed.
+async function reportOutcome(pc) {
+    const outcome = pc.connectionState;
+    if (pc._reported) return;
+    if (outcome !== 'connected' && outcome !== 'failed') return;
+    pc._reported = true;
+    state.socket.emit('connection-result', {
+        outcome,
+        restarted: !!pc._restarted,
+        path: outcome === 'connected' ? await selectedPath(pc) : null
+    });
+}
+
+// Whether the winning route was direct or went through a relay — the number
+// that says how much TURN is actually being used.
+async function selectedPath(pc) {
+    try {
+        const stats = await pc.getStats();
+        let pair = null;
+        stats.forEach(r => {
+            if (r.type === 'candidate-pair' && r.state === 'succeeded' &&
+                (r.nominated || !pair)) pair = r;
+        });
+        if (!pair) return 'unknown';
+        const local = stats.get(pair.localCandidateId);
+        const remote = stats.get(pair.remoteCandidateId);
+        if (!local || !remote) return 'unknown';
+        return (local.candidateType === 'relay' || remote.candidateType === 'relay')
+            ? 'relay' : 'direct';
+    } catch (err) {
+        return 'unknown';
+    }
+}
+
+// What to say for each connection state. Empty means the video is fine and
+// the overlay should get out of the way.
+function peerMessage(pc) {
+    switch (pc && pc.connectionState) {
+        case 'connected': return '';
+        case 'closed':    return '';
+        case 'failed':    return PEER_BLOCKED;
+        case 'disconnected': return 'Connection lost, trying to recover…';
+        default:          return pc && pc._restarted ? 'Reconnecting…' : 'Connecting…';
+    }
+}
+
+function refreshPeerStatus(userId) {
+    const msg = peerMessage(state.peers.get(userId));
+    if (msg) showPeerProblem(userId, msg);
+    else clearPeerProblem(userId);
+}
+
+function showPeerProblem(userId, message) {
+    if (userId === state.currentSpeaker) {
+        speakerStatus.textContent = message;
+        speakerStatus.hidden = false;
+        return;
+    }
+    ensureAudienceTile(userId);
+    const el = document.getElementById(`status-${userId}`);
+    if (el) {
+        el.textContent = message;
+        el.hidden = false;
+    }
+}
+
+function clearPeerProblem(userId) {
+    if (userId === state.currentSpeaker) speakerStatus.hidden = true;
+    const el = document.getElementById(`status-${userId}`);
+    if (el) el.hidden = true;
 }
 
 function updateSpeakerDisplay(data) {
     const oldSpeaker = state.currentSpeaker;
     state.currentSpeaker = data.speakerId;
     speakerName.textContent = displayName(data.speakerId);
+
+    // The spotlight has moved, so a message about the previous speaker goes
+    // with it, and the new speaker's own state takes over.
+    speakerStatus.hidden = true;
+    if (data.speakerId !== state.userId) refreshPeerStatus(data.speakerId);
+    if (oldSpeaker && oldSpeaker !== data.speakerId && oldSpeaker !== state.userId) {
+        refreshPeerStatus(oldSpeaker);
+    }
 
     // Remove new speaker from audience grid (they're on stage now)
     const newSpeakerContainer = document.getElementById(`container-${data.speakerId}`);

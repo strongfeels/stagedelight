@@ -684,6 +684,34 @@ button:disabled {
     color: var(--text-muted);
 }
 
+/* Shown while a peer's video is still coming, or when it can't get through at
+   all, so an empty tile says why instead of looking like a broken app. */
+.peer-status {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+/* [hidden] alone loses to the display above. */
+.peer-status[hidden] {
+    display: none;
+}
+
+#speakerStatus {
+    font-size: 0.95rem;
+}
+
 /* ── Chat ────────────────────────────────────────────────────────────────── */
 #chat {
     display: flex;

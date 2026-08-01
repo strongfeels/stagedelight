@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,6 +11,109 @@ const io = socketIO(server);
 
 // Serve static files
 app.use(express.static('public'));
+
+// ---------------------------------------------------------------- ICE ---
+// STUN only tells a peer its own public address. When both ends sit behind a
+// NAT that refuses to hold a port open for anyone but the host it was opened
+// for — symmetric NAT, common on corporate networks and some mobile carriers
+// — there is no direct path to find, and the call simply never connects. TURN
+// is the fallback: a relay in the middle that both ends can always reach.
+//
+// The credentials are handed out here rather than written into public/js,
+// which anyone can read. Cloudflare mints them through an API; coturn takes a
+// shared secret and lets us mint them ourselves, where the username is the
+// expiry and the password its HMAC, so a leaked pair dies within the hour.
+//
+// With nothing configured this returns exactly what the client used to
+// hardcode, so the app runs unconfigured just as it did before.
+const TURN_TTL = Number(process.env.TURN_TTL || 3600);   // seconds
+const CF_API = process.env.CF_TURN_API || 'https://rtc.live.cloudflare.com/v1/turn/keys';
+let cfCache = null;
+
+function splitList(v) {
+    return (v || '').split(',').map(s => s.trim()).filter(Boolean);
+}
+
+// One call covers every visitor until it nears expiry.
+async function cloudflareIceServers() {
+    if (cfCache && Date.now() < cfCache.expires) return cfCache.servers;
+
+    const res = await fetch(
+        `${CF_API}/${process.env.TURN_KEY_ID}/credentials/generate-ice-servers`,
+        {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${process.env.TURN_API_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ttl: TURN_TTL })
+        });
+    if (!res.ok) throw new Error(`Cloudflare returned ${res.status}`);
+
+    const data = await res.json();
+    const servers = [data.iceServers].flat().filter(Boolean);
+    // Refresh a minute early so nobody is handed a credential that expires
+    // while their call is being set up.
+    cfCache = { servers, expires: Date.now() + Math.max(60, TURN_TTL - 60) * 1000 };
+    return servers;
+}
+
+async function iceServers() {
+    const list = [];
+
+    // Cloudflare hands back its own STUN, so only add a default when no
+    // provider is doing it for us.
+    const usingCloudflare = !!(process.env.TURN_KEY_ID && process.env.TURN_API_TOKEN);
+    const stun = splitList(process.env.STUN_URLS ||
+        (usingCloudflare ? '' : 'stun:stun.l.google.com:19302'));
+    if (stun.length) list.push({ urls: stun });
+
+    if (usingCloudflare) {
+        try {
+            list.push(...await cloudflareIceServers());
+        } catch (err) {
+            // Never fail the request over this — STUN alone still works for
+            // most people, which is better than no call at all.
+            console.warn('Could not mint Cloudflare TURN credentials:', err.message);
+            if (!list.length) list.push({ urls: ['stun:stun.l.google.com:19302'] });
+        }
+        return list;
+    }
+
+    const turn = splitList(process.env.TURN_URLS);
+    if (!turn.length) return list;
+
+    if (process.env.TURN_SECRET) {
+        const username = String(Math.floor(Date.now() / 1000) + TURN_TTL);
+        const credential = crypto
+            .createHmac('sha1', process.env.TURN_SECRET)
+            .update(username)
+            .digest('base64');
+        list.push({ urls: turn, username, credential });
+    } else if (process.env.TURN_USERNAME && process.env.TURN_PASSWORD) {
+        list.push({
+            urls: turn,
+            username: process.env.TURN_USERNAME,
+            credential: process.env.TURN_PASSWORD
+        });
+    } else {
+        console.warn('TURN_URLS is set but no TURN_SECRET or TURN_USERNAME/' +
+                     'TURN_PASSWORD — ignoring TURN, calls behind symmetric NAT will fail.');
+    }
+    return list;
+}
+
+app.get('/api/ice', async (req, res) => {
+    // Short-lived credentials must never be cached by a proxy.
+    res.set('Cache-Control', 'no-store');
+    res.json({
+        iceServers: await iceServers(),
+        // relay-only is how you prove the TURN server actually works: it
+        // forces every call through the relay. Never leave it on in normal
+        // use — it puts all media through your bandwidth bill.
+        iceTransportPolicy: process.env.TURN_ONLY === '1' ? 'relay' : 'all'
+    });
+});
 
 // Room configurations
 const ROOM_CONFIGS = {
@@ -233,6 +337,11 @@ class Room {
         return this.users.size;
     }
 }
+
+// Running totals for how peer connections turn out. In memory only, so they
+// reset whenever the service restarts — enough to answer "does this happen to
+// real users", not a metrics system.
+const iceStats = { connected: 0, failed: 0, direct: 0, relay: 0, recovered: 0 };
 
 // Global rooms manager
 const rooms = new Map();
@@ -559,6 +668,33 @@ io.on('connection', (socket) => {
             from: socket.id,
             candidate: data.candidate
         });
+    });
+
+    // How often calls actually connect, and how many need the relay. This is
+    // the number that decides whether TURN is worth configuring and, later,
+    // whether it is worth paying for. Counters only — no addresses and
+    // nothing identifying, so the logs answer that question and say nothing
+    // about who was calling.
+    socket.on('connection-result', (data) => {
+        if (!data || (data.outcome !== 'connected' && data.outcome !== 'failed')) return;
+
+        if (data.outcome === 'connected') {
+            iceStats.connected++;
+            if (data.path === 'relay') iceStats.relay++;
+            else if (data.path === 'direct') iceStats.direct++;
+            if (data.restarted) iceStats.recovered++;
+        } else {
+            iceStats.failed++;
+        }
+
+        const total = iceStats.connected + iceStats.failed;
+        const pct = total ? Math.round((iceStats.failed / total) * 100) : 0;
+        console.log(
+            `[ice] ${data.outcome}` +
+            `${data.path ? ' via ' + data.path : ''}` +
+            `${data.restarted ? ' (after a retry)' : ''} | ` +
+            `${iceStats.connected} connected, ${iceStats.failed} failed (${pct}% failing), ` +
+            `${iceStats.relay} needed the relay, ${iceStats.recovered} saved by the retry`);
     });
 
     socket.on('disconnect', () => {
