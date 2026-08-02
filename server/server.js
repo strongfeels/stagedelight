@@ -347,9 +347,21 @@ const iceStats = { connected: 0, failed: 0, direct: 0, relay: 0, recovered: 0 };
 const rooms = new Map();
 let roomCounter = 1;
 
+// The video is peer to peer, with no server in the middle, so everyone sends
+// their own stream to everyone else: in a room of N you are uploading N-1
+// copies of yourself. At six that is five streams, roughly 5 Mbit/s up, which
+// an ordinary connection manages. At twenty it is nineteen streams and no
+// home broadband or laptop encoder will do it — the room doesn't degrade, it
+// stops working. Going beyond this means an SFU relaying one upload to
+// everyone, which is a server and a bandwidth bill.
+//
+// Nobody is turned away when a room fills; they get a fresh room of the same
+// type, which is what the loop below does.
+const MAX_PER_ROOM = 6;
+
 function findOrCreateRoom(roomType) {
     for (const [id, room] of rooms) {
-        if (room.roomType === roomType && room.users.size < 20) {
+        if (room.roomType === roomType && room.users.size < MAX_PER_ROOM) {
             return room;
         }
     }
